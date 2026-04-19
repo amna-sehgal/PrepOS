@@ -8,6 +8,7 @@ import {
   Play, BrainCircuit, MessageSquare, Sparkles, ToggleLeft,
   ToggleRight, Clock, CheckCircle2, MinusCircle, Dot,
 } from 'lucide-react'
+import { startMockInterview } from '@/lib/actions/mock'
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 const container = {
@@ -52,6 +53,7 @@ export default function MockInterviewSetupPage() {
   const [hints, setHints] = useState(true)
   const [visibleSteps, setVisibleSteps] = useState(1)
   const [elapsed, setElapsed] = useState(47)
+  
 
   // Animate preview steps in sequence
   useEffect(() => {
@@ -67,10 +69,18 @@ export default function MockInterviewSetupPage() {
     return () => clearInterval(t)
   }, [])
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const config = { role, difficulty, type, company, hints }
-    localStorage.setItem('prepos_interview_config', JSON.stringify(config))
-    router.push('/mock-interview/session')
+
+    try {
+      const result = await startMockInterview(config)
+
+      localStorage.setItem('prepos_session_id', result.sessionId)
+
+      router.push('/mock-interview/session')
+    } catch (error) {
+      console.error('Failed to start interview:', error)
+    }
   }
 
   const formatTime = (s: number) =>

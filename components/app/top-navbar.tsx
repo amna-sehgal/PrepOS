@@ -3,8 +3,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Mic2, KanbanSquare, Lightbulb,
   Map, BookOpen, Settings, LogOut, Bell, ChevronDown, Menu, X,
@@ -19,20 +20,61 @@ const navLinks = [
   { label: 'Resources', href: '/resources', icon: BookOpen },
 ]
 
-const notifications = [
-  { id: 1, text: 'Razorpay interview in 3 days', type: 'urgent', time: '2h ago' },
-  { id: 2, text: 'Your prep plan for Flipkart is ready', type: 'info', time: '5h ago' },
-  { id: 3, text: 'Mock interview report generated', type: 'success', time: '1d ago' },
-]
-
 export default function TopNavbar() {
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [loadingNotif, setLoadingNotif] = useState(true)
   const pathname = usePathname()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [userName, setUserName] = useState('')
+  const [collegeName, setCollegeName] = useState('')
+  const supabase = createClient()
+  const router = useRouter()
 
-  const unreadCount = notifications.filter(n => n.type === 'urgent' || n.type === 'info').length
+  const unreadCount = notifications.filter(n => !n.is_read).length
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
 
+      if (user) {
+        setUserName(user.user_metadata.full_name || '')
+        setCollegeName(user.user_metadata.college_name || '')
+      }
+    }
+
+    getUser()
+  }, [])
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        setNotifications(data)
+      }
+
+      setLoadingNotif(false)
+    }
+
+    fetchNotifications()
+  }, [])
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      console.log('logout error:', error.message)
+      return
+    }
+
+    router.replace('/auth/login')
+  }
   return (
     <>
       <nav
@@ -153,7 +195,7 @@ export default function TopNavbar() {
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-[12px] leading-snug" style={{ color: 'var(--void)' }}>{n.text}</p>
-                          <p className="text-[10px] mt-0.5 font-mono-frag" style={{ color: 'rgba(26,16,53,0.35)' }}>{n.time}</p>
+                          <p className="text-[10px] mt-0.5 font-mono-frag" style={{ color: 'rgba(26,16,53,0.35)' }}>{new Date(n.created_at).toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -182,10 +224,10 @@ export default function TopNavbar() {
                     fontFamily: 'var(--font-archivo)',
                   }}
                 >
-                  A
+                  {userName?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <span className="text-[13px] font-semibold hidden sm:block" style={{ fontFamily: 'var(--font-archivo)' }}>
-                  Arjun
+                  {userName?.split(' ')[0] || 'User'}
                 </span>
                 <ChevronDown size={13} strokeWidth={2}
                   style={{ transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
@@ -204,9 +246,9 @@ export default function TopNavbar() {
                   >
                     <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--void-12)' }}>
                       <p className="font-bold text-[13px]" style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
-                        Arjun Sharma
+                        {userName || 'User'}
                       </p>
-                      <p className="text-[11px] mt-0.5" style={{ color: 'rgba(26,16,53,0.4)' }}>BITS Pilani</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: 'rgba(26,16,53,0.4)' }}>{collegeName || 'College not added'}</p>
                     </div>
 
                     <Link href="/settings" className="no-underline" onClick={() => setUserMenuOpen(false)}>
@@ -221,7 +263,10 @@ export default function TopNavbar() {
                       <button
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 transition-colors hover:bg-ghost cursor-pointer"
                         style={{ color: 'var(--coral)' }}
-                        onClick={() => { setUserMenuOpen(false) }}
+                        onClick={async () => {
+                          setUserMenuOpen(false)
+                          await handleLogout()
+                        }}
                       >
                         <LogOut size={14} strokeWidth={1.8} />
                         <span className="text-[13px] font-semibold" style={{ fontFamily: 'var(--font-archivo)' }}>

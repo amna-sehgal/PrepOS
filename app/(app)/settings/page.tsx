@@ -1,13 +1,14 @@
 'use client'
 
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Settings, User, Target, Bell, Lock, Trash2,
   Save, Eye, EyeOff, CheckCircle2, AlertTriangle,
   Building2, GraduationCap, Mail, Calendar, ToggleLeft,
   ToggleRight, ChevronRight, X, AlertCircle, Loader2,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 const fadeUp = {
@@ -154,11 +155,36 @@ function DeleteModal({ onClose }: { onClose: () => void }) {
   const [deleting, setDeleting] = useState(false)
   const ready = confirm === 'DELETE'
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!ready) return
+
     setDeleting(true)
-    // TODO: wire up account deletion
-    setTimeout(() => setDeleting(false), 2000)
+
+    const supabase = createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    try {
+      // 1. Delete user data (IMPORTANT: order matters if FK exists)
+
+      await supabase.from('user_settings').delete().eq('user_id', user.id)
+      await supabase.from('brainstorm_cards').delete().eq('user_id', user.id)
+      await supabase.from('mock_interviews').delete().eq('user_id', user.id)
+
+      // add any other tables you created
+
+      // 2. Sign out user
+      await supabase.auth.signOut()
+
+      // 3. Redirect to landing/login
+      window.location.href = '/'
+
+    } catch (err) {
+      console.error(err)
+      alert("Something went wrong")
+      setDeleting(false)
+    }
   }
 
   return (
@@ -272,11 +298,28 @@ const sections = [
 
 // ── Main page ──────────────────────────────────────────
 export default function SettingsPage() {
+  const supabase = createClient()
   // Profile
-  const [name, setName] = useState('Arjun Sharma')
-  const [email, setEmail] = useState('arjun@bits-pilani.ac.in')
-  const [college, setCollege] = useState('BITS Pilani')
-  const [year, setYear] = useState('3rd Year')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [college, setCollege] = useState('')
+  const [year, setYear] = useState('')
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getUser()
+
+      if (error || !data?.user) return
+
+      const user = data.user
+
+      setName(user.user_metadata?.full_name || '')
+      setEmail(user.email || '')
+      setCollege(user.user_metadata?.college_name || '')
+      setYear(user.user_metadata?.year || '')
+    }
+
+    fetchUser()
+  }, [])
   const [savingProfile, setSavingProfile] = useState(false)
   const [savedProfile, setSavedProfile] = useState(false)
 
@@ -322,6 +365,79 @@ export default function SettingsPage() {
 
   const toggleCompany = (c: string) =>
     setTargetCompanies(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+      if (data) {
+        setTargetRole(data.target_role || '')
+        setTargetCompanies(data.target_companies || [])
+
+        if (data.notifications) {
+          setNotifInterviewReminder(data.notifications.interviewReminder ?? true)
+          setNotifPrepPlan(data.notifications.prepPlan ?? true)
+          setNotifStreak(data.notifications.streak ?? false)
+          setNotifEmail(data.notifications.email ?? true)
+        }
+      }
+    }
+
+    fetchSettings()
+  }, [supabase])
+  const saveSettings = async (updates: any) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // STEP 1: fetch existing
+    const { data: existing } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    // STEP 2: merge everything safely
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({
+        user_id: user.id,
+
+        target_role: updates.target_role ?? existing?.target_role ?? null,
+        target_companies: updates.target_companies ?? existing?.target_companies ?? null,
+
+        notifications: {
+          interviewReminder:
+            updates.notifications?.interviewReminder ??
+            existing?.notifications?.interviewReminder ??
+            true,
+
+          prepPlan:
+            updates.notifications?.prepPlan ??
+            existing?.notifications?.prepPlan ??
+            true,
+
+          streak:
+            updates.notifications?.streak ??
+            existing?.notifications?.streak ??
+            false,
+
+          email:
+            updates.notifications?.email ??
+            existing?.notifications?.email ??
+            true,
+        },
+      }, {
+        onConflict: 'user_id'   // 🔥 THIS LINE FIXES YOUR ENTIRE BUG
+      })
+
+    return error;
+  }
 
   return (
     <div className="min-h-screen font-familjen" style={{ background: 'var(--ghost)', color: 'var(--void)' }}>
@@ -421,7 +537,26 @@ export default function SettingsPage() {
 
               <div className="flex justify-end pt-1">
                 <SaveButton
-                  onClick={() => simulateSave(setSavingProfile, setSavedProfile)}
+                  onClick={async () => {
+                    setSavingProfile(true)
+
+                    const { data, error } = await supabase.auth.updateUser({
+                      data: {
+                        full_name: name,
+                        college_name: college,
+                        year: year,
+                      },
+                    })
+
+                    setSavingProfile(false)
+
+                    if (!error) {
+                      setSavedProfile(true)
+                      setTimeout(() => setSavedProfile(false), 2500)
+                    } else {
+                      console.error(error)
+                    }
+                  }}
                   saving={savingProfile} saved={savedProfile} />
               </div>
             </div>
@@ -475,7 +610,27 @@ export default function SettingsPage() {
 
               <div className="flex justify-end pt-1">
                 <SaveButton
-                  onClick={() => simulateSave(setSavingTargets, setSavedTargets)}
+                  onClick={async () => {
+                    setSavingTargets(true)
+
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (!user) return
+
+                    const error = await saveSettings({
+                      target_role: targetRole,
+                      target_companies: targetCompanies,
+                    })
+
+                    setSavingTargets(false)
+
+                    if (!error) {
+                      setSavedTargets(true)
+                      setTimeout(() => setSavedTargets(false), 2500)
+                    } else {
+                      console.error("ERROR MESSAGE:", error?.message)
+                      console.error("FULL ERROR:", error)
+                    }
+                  }}
                   saving={savingTargets} saved={savedTargets} />
               </div>
             </div>
@@ -501,7 +656,29 @@ export default function SettingsPage() {
 
               <div className="flex justify-end pt-1">
                 <SaveButton
-                  onClick={() => simulateSave(setSavingNotif, setSavedNotif)}
+                  onClick={async () => {
+                    setSavingNotif(true)
+
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (!user) return
+                    const error = await saveSettings({
+                      notifications: {
+                        interviewReminder: notifInterviewReminder,
+                        prepPlan: notifPrepPlan,
+                        streak: notifStreak,
+                        email: notifEmail,
+                      },
+                    })
+
+                    setSavingNotif(false)
+
+                    if (!error) {
+                      setSavedNotif(true)
+                      setTimeout(() => setSavedNotif(false), 2500)
+                    } else {
+                      console.error(error)
+                    }
+                  }}
                   saving={savingNotif} saved={savedNotif} />
               </div>
             </div>
@@ -567,11 +744,39 @@ export default function SettingsPage() {
 
               <div className="flex justify-end pt-1">
                 <SaveButton
-                  onClick={() => {
-                    if (!passError && currentPass && newPass && confirmPass)
-                      simulateSave(setSavingPass, setSavedPass)
+                  onClick={async () => {
+                    if (!newPass || newPass.length < 8) {
+                      alert("Password must be at least 8 characters")
+                      return
+                    }
+
+                    if (newPass !== confirmPass) {
+                      alert("Passwords do not match")
+                      return
+                    }
+
+                    setSavingPass(true)
+
+                    const { error } = await supabase.auth.updateUser({
+                      password: newPass,
+                    })
+
+                    setSavingPass(false)
+
+                    if (!error) {
+                      setSavedPass(true)
+                      setCurrentPass('')
+                      setNewPass('')
+                      setConfirmPass('')
+                      setTimeout(() => setSavedPass(false), 2000)
+                    } else {
+                      console.error(error)
+                      alert(error.message)
+                    }
                   }}
-                  saving={savingPass} saved={savedPass} />
+                  saving={savingPass}
+                  saved={savedPass}
+                />
               </div>
             </div>
           </Section>

@@ -28,7 +28,8 @@ type Config = {
   role: string; difficulty: string; type: string; company: string; hints: boolean
 }
 type ReportData = {
-  config: Config; elapsed: number; feedbacks: Feedback[]; completedAt: string
+  config: Config; elapsed: number; feedbacks: Feedback[]; completedAt: string;
+  weakAreas?: string[]; reviseTopics?: string[]
 }
 
 function useCountUp(target: number, duration = 1000, delay = 0) {
@@ -70,9 +71,41 @@ export default function MockInterviewReportPage() {
   const [data, setData] = useState<ReportData | null>(null)
 
   useEffect(() => {
-    const raw = localStorage.getItem(`prepos_report_${id}`)
-    if (!raw) { router.push('/mock-interview'); return }
-    setData(JSON.parse(raw))
+    const fetchReport = async () => {
+      try {
+        const res = await fetch(`/api/mock/${id}`)
+        const data = await res.json()
+
+        if (!res.ok) throw new Error(data.error)
+
+        const formatted: ReportData = {
+          config: {
+            role: data.role,
+            difficulty: data.difficulty,
+            type: data.interview_type,
+            company: data.company,
+            hints: data.hints,
+          },
+          elapsed: data.elapsed || 0,
+
+          // convert transcript → feedbacks
+          feedbacks: (data.transcript || [])
+            .filter((t: any) => t.feedback)
+            .map((t: any) => t.feedback),
+
+          completedAt: data.completedAt,
+          weakAreas: data.weakAreas,
+          reviseTopics: data.reviseTopics,
+        }
+
+        setData(formatted)
+      } catch (err) {
+        console.error('Failed to load report:', err)
+        router.push('/mock-interview')
+      }
+    }
+
+    fetchReport()
   }, [id, router])
 
   const avgScore = data
@@ -84,13 +117,13 @@ export default function MockInterviewReportPage() {
 
   const animatedScore = useCountUp(avgScore, 900, 250)
 
-  const weakAreas = ['Dynamic Programming', 'Time Complexity Analysis']
-  const reviseTopics = ['Sliding Window', 'Two Pointer', 'Graph BFS/DFS']
+  const weakAreas = data?.weakAreas || ['Dynamic Programming', 'Time Complexity Analysis']
+  const reviseTopics = data?.reviseTopics || ['Sliding Window', 'Two Pointer', 'Graph BFS/DFS']
 
   const typeIcon = data?.config.type === 'DSA' ? BrainCircuit
     : data?.config.type === 'System Design' ? Activity
-    : data?.config.type === 'HR / Behavioural' ? MessageSquare
-    : Sparkles
+      : data?.config.type === 'HR / Behavioural' ? MessageSquare
+        : Sparkles
 
   if (!data) {
     return (
@@ -173,10 +206,12 @@ export default function MockInterviewReportPage() {
                   {scoreLabel(avgScore)}
                 </p>
                 <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(i => (
+                  {[1, 2, 3, 4, 5].map(i => (
                     <Star key={i} size={12} strokeWidth={1.8}
-                      style={{ color: i <= Math.round(avgScore / 20) ? scoreColor(avgScore) : 'rgba(238,237,254,0.2)',
-                        fill: i <= Math.round(avgScore / 20) ? scoreColor(avgScore) : 'transparent' }} />
+                      style={{
+                        color: i <= Math.round(avgScore / 20) ? scoreColor(avgScore) : 'rgba(238,237,254,0.2)',
+                        fill: i <= Math.round(avgScore / 20) ? scoreColor(avgScore) : 'transparent'
+                      }} />
                   ))}
                 </div>
               </div>

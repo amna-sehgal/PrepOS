@@ -1,13 +1,15 @@
 'use client'
 
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Plus, X, Download, Sparkles, CalendarClock, Building2,
   ChevronDown, FileText, Trash2, Edit3, CheckCircle2,
   Clock, AlertTriangle, ArrowRight, KanbanSquare, GripVertical,
   Briefcase, Tag, StickyNote, Calendar, Save, ExternalLink,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { generatePrepPlan } from '@/lib/actions/tracker'
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 
@@ -36,23 +38,11 @@ type Entry = {
 
 // ── Column config ─────────────────────────────────────────
 const columns: { status: Status; color: string; bg: string; border: string; dim: string }[] = [
-  { status: 'Applied',   color: 'var(--brand)',  bg: 'rgba(83,74,183,0.07)',   border: 'rgba(83,74,183,0.2)',   dim: 'rgba(83,74,183,0.12)' },
-  { status: 'OA',        color: 'var(--amber)',  bg: 'rgba(239,159,39,0.07)',  border: 'rgba(239,159,39,0.2)',  dim: 'rgba(239,159,39,0.12)' },
-  { status: 'Interview', color: '#8B5CF6',       bg: 'rgba(139,92,246,0.07)', border: 'rgba(139,92,246,0.2)',  dim: 'rgba(139,92,246,0.12)' },
-  { status: 'Offer',     color: 'var(--teal)',   bg: 'rgba(29,158,117,0.07)', border: 'rgba(29,158,117,0.2)',  dim: 'rgba(29,158,117,0.12)' },
-  { status: 'Rejected',  color: 'var(--coral)',  bg: 'rgba(226,75,74,0.07)',  border: 'rgba(226,75,74,0.2)',   dim: 'rgba(226,75,74,0.12)' },
-]
-
-// ── Mock data ─────────────────────────────────────────────
-const initialEntries: Entry[] = [
-  { id: '1', company: 'Razorpay',   role: 'SDE Intern',      appliedDate: '2025-03-10', interviewDate: '2025-03-24', round: 'Technical Round 1', status: 'Interview', notes: 'Focus on system design basics', prepPlan: '**Day 1–2:** Arrays & Strings\n**Day 3–4:** Trees & Graphs\n**Day 5:** OS Fundamentals\n**Day 6:** Mock Interview\n**Day 7:** Rest & Review' },
-  { id: '2', company: 'Flipkart',   role: 'SDE Intern',      appliedDate: '2025-03-12', interviewDate: '2025-03-28', round: 'Online Assessment', status: 'OA',        notes: 'Check past OA problems on LeetCode' },
-  { id: '3', company: 'Google',     role: 'STEP Intern',     appliedDate: '2025-03-01', interviewDate: '',           round: '',                  status: 'Applied',   notes: 'Applied via referral' },
-  { id: '4', company: 'Atlassian',  role: 'PM Intern',       appliedDate: '2025-02-20', interviewDate: '2025-04-03', round: 'HR Round',          status: 'Interview', notes: 'Prepare STAR stories' },
-  { id: '5', company: 'CRED',       role: 'Frontend Intern', appliedDate: '2025-03-05', interviewDate: '',           round: 'Offer Extended',    status: 'Offer',     notes: 'Deadline to respond: Apr 10' },
-  { id: '6', company: 'Swiggy',     role: 'SDE Intern',      appliedDate: '2025-02-15', interviewDate: '',           round: '',                  status: 'Rejected',  notes: 'Rejected after OA round' },
-  { id: '7', company: 'Zepto',      role: 'SDE Intern',      appliedDate: '2025-03-18', interviewDate: '',           round: '',                  status: 'Applied',   notes: '' },
-  { id: '8', company: 'PhonePe',    role: 'SDE Intern',      appliedDate: '2025-03-20', interviewDate: '',           round: '',                  status: 'OA',        notes: 'OA on HackerRank' },
+  { status: 'Applied', color: 'var(--brand)', bg: 'rgba(83,74,183,0.07)', border: 'rgba(83,74,183,0.2)', dim: 'rgba(83,74,183,0.12)' },
+  { status: 'OA', color: 'var(--amber)', bg: 'rgba(239,159,39,0.07)', border: 'rgba(239,159,39,0.2)', dim: 'rgba(239,159,39,0.12)' },
+  { status: 'Interview', color: '#8B5CF6', bg: 'rgba(139,92,246,0.07)', border: 'rgba(139,92,246,0.2)', dim: 'rgba(139,92,246,0.12)' },
+  { status: 'Offer', color: 'var(--teal)', bg: 'rgba(29,158,117,0.07)', border: 'rgba(29,158,117,0.2)', dim: 'rgba(29,158,117,0.12)' },
+  { status: 'Rejected', color: 'var(--coral)', bg: 'rgba(226,75,74,0.07)', border: 'rgba(226,75,74,0.2)', dim: 'rgba(226,75,74,0.12)' },
 ]
 
 // ── Helpers ───────────────────────────────────────────────
@@ -63,8 +53,8 @@ function daysUntil(dateStr: string) {
 }
 function daysStyle(d: number | null) {
   if (d === null) return null
-  if (d <= 3)  return { color: 'var(--coral)', bg: 'rgba(226,75,74,0.1)' }
-  if (d <= 7)  return { color: 'var(--amber)', bg: 'rgba(239,159,39,0.1)' }
+  if (d <= 3) return { color: 'var(--coral)', bg: 'rgba(226,75,74,0.1)' }
+  if (d <= 7) return { color: 'var(--amber)', bg: 'rgba(239,159,39,0.1)' }
   return { color: 'var(--teal)', bg: 'rgba(29,158,117,0.1)' }
 }
 function colFor(status: Status) {
@@ -267,14 +257,46 @@ function PrepPlanModal({ entry, onClose }: { entry: Entry; onClose: () => void }
   const [loading, setLoading] = useState(!entry.prepPlan)
   const [plan, setPlan] = useState(entry.prepPlan || '')
 
-  useState(() => {
-    if (!entry.prepPlan) {
-      setTimeout(() => {
-        setPlan(`**Day 1–2:** Core DSA topics for ${entry.company} — Arrays, Strings, HashMaps\n**Day 3–4:** Trees, Graphs, BFS/DFS patterns\n**Day 5:** ${entry.role.includes('PM') ? 'Product sense, metrics, prioritisation frameworks' : 'Dynamic Programming essentials'}\n**Day 6:** Full mock interview (${entry.company} style)\n**Day 7:** Review weak areas, rest, confidence boost`)
+  useEffect(() => {
+    const fetchPlan = async () => {
+      const supabase = createClient()
+
+      try {
+        if (!entry.prepPlan) {
+          const generatedPlan = await generatePrepPlan({
+            company: entry.company,
+            role: entry.role,
+            round: entry.round,
+            notes: entry.notes,
+            interviewDate: entry.interviewDate,
+          })
+
+          setPlan(generatedPlan)
+
+          await supabase
+            .from('tracker_entries')
+            .update({ prep_plan: generatedPlan })
+            .eq('id', entry.id)
+        }
+      } catch (error) {
+        console.error('Prep plan failed:', error)
+
+        const fallbackPlan = `
+Day 1: Arrays + Strings
+Day 2: Trees + Graphs
+Day 3: DP + Recursion
+Day 4: Mock interview
+Day 5: HR + resume review
+      `
+
+        setPlan(fallbackPlan)
+      } finally {
         setLoading(false)
-      }, 1800)
+      }
     }
-  })
+
+    fetchPlan()
+  }, [entry])
 
   return (
     <motion.div
@@ -288,7 +310,7 @@ function PrepPlanModal({ entry, onClose }: { entry: Entry; onClose: () => void }
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.97 }}
         transition={{ duration: 0.3, ease }}
-        className="w-full max-w-md rounded-2xl overflow-hidden"
+        className="w-full max-w-md rounded-2xl overflow-hidden max-h-[85vh] flex flex-col"
         style={{ background: 'var(--void)', border: '1.5px solid rgba(238,237,254,0.1)' }}
       >
         <div className="flex items-center justify-between px-6 py-4"
@@ -312,7 +334,7 @@ function PrepPlanModal({ entry, onClose }: { entry: Entry; onClose: () => void }
           </motion.button>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 overflow-y-auto flex-1">
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-8">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
@@ -576,31 +598,137 @@ function PipelineBar({ entries }: { entries: Entry[] }) {
 
 // ── Main page ─────────────────────────────────────────────
 export default function TrackerPage() {
-  const [entries, setEntries] = useState<Entry[]>(initialEntries)
+  const [entries, setEntries] = useState<Entry[]>([])
+  const supabase = createClient()
   const [modalEntry, setModalEntry] = useState<Entry | null>(null)
   const [prepEntry, setPrepEntry] = useState<Entry | null>(null)
+  useEffect(() => {
+    const fetchEntries = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('tracker_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        const formatted = data.map(item => ({
+          id: item.id,
+          company: item.company,
+          role: item.role,
+          appliedDate: item.applied_date,
+          interviewDate: item.interview_date,
+          round: item.round,
+          status: item.status as Status,
+          notes: item.notes,
+          prepPlan: item.prep_plan,
+        }))
+
+        setEntries(formatted)
+      }
+    }
+
+    fetchEntries()
+  }, [])
+
 
   const openAdd = (status: Status = 'Applied') => setModalEntry({ ...blankEntry(), status })
   const openEdit = (e: Entry) => setModalEntry({ ...e })
 
-  const saveEntry = (e: Entry) => {
-    setEntries(prev =>
-      prev.find(x => x.id === e.id)
-        ? prev.map(x => x.id === e.id ? e : x)
-        : [...prev, e]
-    )
+  const saveEntry = async (e: Entry) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const payload = {
+      user_id: user.id,
+      company: e.company,
+      role: e.role,
+      applied_date: e.appliedDate,
+      interview_date: e.interviewDate,
+      round: e.round,
+      status: e.status,
+      notes: e.notes,
+      prep_plan: e.prepPlan || '',
+    }
+
+    if (entries.find(x => x.id === e.id)) {
+      await supabase
+        .from('tracker_entries')
+        .update(payload)
+        .eq('id', e.id)
+
+      setEntries(prev =>
+        prev.map(item =>
+          item.id === e.id ? e : item
+        )
+      )
+    } else {
+      const { data } = await supabase
+        .from('tracker_entries')
+        .insert(payload)
+        .select()
+        .single()
+
+      if (data) {
+        setEntries(prev => [
+          {
+            id: data.id,
+            company: data.company,
+            role: data.role,
+            appliedDate: data.applied_date,
+            interviewDate: data.interview_date,
+            round: data.round,
+            status: data.status as Status,
+            notes: data.notes,
+            prepPlan: data.prep_plan,
+          },
+          ...prev,
+        ])
+      }
+    }
+
     setModalEntry(null)
   }
 
-  const deleteEntry = (id: string) => setEntries(prev => prev.filter(e => e.id !== id))
+  const deleteEntry = async (id: string) => {
+    await supabase
+      .from('tracker_entries')
+      .delete()
+      .eq('id', id)
 
-  const moveEntry = (id: string, dir: 'left' | 'right') => {
-    setEntries(prev => prev.map(e => {
-      if (e.id !== id) return e
-      const idx = columns.findIndex(c => c.status === e.status)
-      const newIdx = dir === 'right' ? Math.min(idx + 1, columns.length - 1) : Math.max(idx - 1, 0)
-      return { ...e, status: columns[newIdx].status }
-    }))
+    setEntries(prev => prev.filter(e => e.id !== id))
+  }
+
+  const moveEntry = async (id: string, dir: 'left' | 'right') => {
+    const entry = entries.find(e => e.id === id)
+    if (!entry) return
+
+    const idx = columns.findIndex(c => c.status === entry.status)
+    const newIdx =
+      dir === 'right'
+        ? Math.min(idx + 1, columns.length - 1)
+        : Math.max(idx - 1, 0)
+
+    const newStatus = columns[newIdx].status
+
+    await supabase
+      .from('tracker_entries')
+      .update({ status: newStatus })
+      .eq('id', id)
+
+    setEntries(prev =>
+      prev.map(e =>
+        e.id === id ? { ...e, status: newStatus } : e
+      )
+    )
   }
 
   const totalActive = entries.filter(e => e.status !== 'Rejected').length
@@ -611,6 +739,7 @@ export default function TrackerPage() {
   }).length
 
   const statMax = Math.max(totalActive, 1)
+
 
   return (
     <div className="min-h-screen font-familjen" style={{ background: 'var(--ghost)', color: 'var(--void)' }}>

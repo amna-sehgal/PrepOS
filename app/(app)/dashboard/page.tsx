@@ -11,7 +11,7 @@ import {
   BookOpen, Clock, Sparkles, Sun, Sunset, Moon, GraduationCap,
   CalendarClock, BrainCircuit, Trophy, Activity,
 } from 'lucide-react'
-
+import { createClient } from '@/lib/supabase/client'
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 
 const pageContainer = {
@@ -49,40 +49,6 @@ function useCountUp(target: number, duration = 1200, delay = 0) {
   return count
 }
 
-const user = { name: 'Arjun Sharma', college: 'BITS Pilani' }
-
-const stats = [
-  { label: 'Mock Interviews', value: 12, suffix: '', sub: '+3 this week', color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
-  { label: 'Day Streak', value: 7, suffix: '', sub: 'Personal best!', color: 'var(--amber)', bg: 'rgba(239,159,39,0.08)', icon: Flame },
-  { label: 'Companies', value: 9, suffix: '', sub: '2 interviews soon', color: 'var(--teal)', bg: 'rgba(29,158,117,0.08)', icon: Building2 },
-  { label: 'Roadmap', value: 64, suffix: '%', sub: 'Week 5 of 8', color: 'var(--coral)', bg: 'rgba(226,75,74,0.08)', icon: TrendingUp },
-]
-
-const continueItems = [
-  {
-    type: 'Mock Interview', icon: Target,
-    title: 'Google SDE Intern — Round 2', desc: 'DSA · Advanced · 3 questions left',
-    href: '/mock-interview', accent: 'var(--brand)', accentBg: 'rgba(83,74,183,0.08)', progress: 60,
-  },
-  {
-    type: 'Roadmap', icon: Map,
-    title: 'Week 5 — Graphs & DP', desc: '4 of 7 topics completed',
-    href: '/roadmap', accent: 'var(--coral)', accentBg: 'rgba(226,75,74,0.08)', progress: 57,
-  },
-]
-
-const upcomingInterviews = [
-  { company: 'Razorpay', role: 'SDE Intern', round: 'Technical Round 1', date: 'Mar 24', daysLeft: 3 },
-  { company: 'Flipkart', role: 'SDE Intern', round: 'Online Assessment', date: 'Mar 28', daysLeft: 7 },
-  { company: 'Atlassian', role: 'PM Intern', round: 'HR Round', date: 'Apr 3', daysLeft: 13 },
-]
-
-const recentScores = [
-  { role: 'Google SDE', type: 'DSA', score: 78, date: '2 days ago', breakdown: { correct: 5, partial: 2, wrong: 1 } },
-  { role: 'Flipkart PM', type: 'Behavioural', score: 91, date: '4 days ago', breakdown: { correct: 7, partial: 1, wrong: 0 } },
-  { role: 'Razorpay SDE', type: 'System Design', score: 63, date: '1 week ago', breakdown: { correct: 3, partial: 3, wrong: 2 } },
-]
-
 const aiActions = [
   {
     icon: AlertTriangle, title: 'Razorpay interview in 3 days',
@@ -117,6 +83,7 @@ const subScores = [
   { label: 'Behavioural', val: 90, icon: Trophy },
 ]
 
+
 function scoreColor(s: number) {
   if (s >= 80) return 'var(--teal)'
   if (s >= 60) return 'var(--amber)'
@@ -134,7 +101,7 @@ function greetingIcon(h: number) {
   return Moon
 }
 
-function StatCard({ s, i }: { s: typeof stats[0], i: number }) {
+function StatCard({ s, i }: { s: any, i: number }) {
   const Icon = s.icon
   const count = useCountUp(s.value, 900, 120 + i * 80)
   return (
@@ -167,7 +134,7 @@ function StatCard({ s, i }: { s: typeof stats[0], i: number }) {
   )
 }
 
-function ScoreRow({ r, i }: { r: typeof recentScores[0], i: number }) {
+function ScoreRow({ r, i, total }: { r: any, i: number, total: number }) {
   const [hovered, setHovered] = useState(false)
   return (
     <motion.div
@@ -175,7 +142,7 @@ function ScoreRow({ r, i }: { r: typeof recentScores[0], i: number }) {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       className="flex items-center gap-4 px-5 py-4 transition-colors cursor-default"
-      style={{ borderBottom: i < recentScores.length - 1 ? '1px solid rgba(26,16,53,0.06)' : 'none' }}
+      style={{ borderBottom: i < total - 1 ? '1px solid rgba(26,16,53,0.06)' : 'none' }}
     >
       <div className="relative w-12 h-12 flex-shrink-0">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
@@ -241,11 +208,259 @@ function ScoreRow({ r, i }: { r: typeof recentScores[0], i: number }) {
 }
 
 export default function DashboardPage() {
+  type UserState = {
+    name: string
+    college: string
+  }
+
+  const [user, setUser] = useState<UserState>({
+    name: '',
+    college: '',
+  })
+  const [readiness, setReadiness] = useState(0)
+  const [completedInterviews, setCompletedInterviews] = useState<any[]>([])
+  const subScores = [
+    {
+      label: 'DSA',
+      val: Math.round(
+        completedInterviews
+          .filter((i: any) => i.type === 'DSA')
+          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (completedInterviews.filter((i: any) => i.type === 'DSA').length || 1)
+      ),
+      icon: Activity,
+    },
+    {
+      label: 'System Design',
+      val: Math.round(
+        completedInterviews
+          .filter((i: any) => i.type === 'System Design')
+          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (completedInterviews.filter((i: any) => i.type === 'System Design').length || 1)
+      ),
+      icon: BrainCircuit,
+    },
+    {
+      label: 'Behavioural',
+      val: Math.round(
+        completedInterviews
+          .filter((i: any) => i.type === 'Behavioural')
+          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (completedInterviews.filter((i: any) => i.type === 'Behavioural').length || 1)
+      ),
+      icon: Trophy,
+    },
+  ]
+
+  const [continueItems, setContinueItems] = useState<any[]>([])
+  const [roadmap, setRoadmap] = useState<any>(null)
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const GreetIcon = greetingIcon(hour)
-  const readinessCount = useCountUp(72, 1000, 400)
+  const readinessCount = useCountUp(readiness, 1000, 400)
+  const supabase = createClient()
+  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
+  const [mockCount, setMockCount] = useState(0)
+  const [companyCount, setCompanyCount] = useState(0)
+  const [streak, setStreak] = useState(0)
+  const [recentScores, setRecentScores] = useState<any[]>([])
+  const stats = [
+    { label: 'Mock Interviews', value: mockCount, suffix: '', sub: '+3 this week', color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
+    {
+      label: 'Day Streak',
+      value: streak,
+      suffix: '',
+      sub: 'Keep going 🔥',
+      color: 'var(--amber)',
+      bg: 'rgba(239,159,39,0.08)',
+      icon: Flame
+    },
+    { label: 'Companies', value: companyCount, suffix: '', sub: '', color: 'var(--teal)', bg: 'rgba(29,158,117,0.08)', icon: Building2 },
+    {
+      label: 'Roadmap',
+      value: roadmap?.progress || 0,
+      suffix: '%',
+      sub: roadmap?.title || 'No roadmap',
+      color: 'var(--coral)',
+      bg: 'rgba(226,75,74,0.08)',
+      icon: TrendingUp
+    },
+  ]
+  useEffect(() => {
+    if (!completedInterviews.length) return
 
+    const scores = completedInterviews
+      .map((item: any) => item.score)
+      .filter((s: number) => s !== null)
+
+    if (scores.length === 0) return
+
+    const avg =
+      scores.reduce((sum: number, s: number) => sum + s, 0) / scores.length
+
+    setReadiness(Math.round(avg))
+  }, [completedInterviews])
+  useEffect(() => {
+    if (!completedInterviews.length) return
+
+    const formatted = completedInterviews.slice(0, 3).map((item: any) => ({
+      role: item.role || 'Unknown Role',
+      type: item.type || 'General',
+      score: item.score || 0,
+      date: item.date || '',
+      breakdown: {
+        correct: item.correct || 0,
+        partial: item.partial || 0,
+        wrong: item.wrong || 0,
+      },
+    }))
+
+    setRecentScores(formatted)
+  }, [completedInterviews])
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getUser()
+
+      if (error || !data?.user) return
+
+      const authUser = data.user
+
+      setUser({
+        name: authUser.user_metadata?.full_name || '',
+        college: authUser.user_metadata?.college_name || '',
+      })
+    }
+
+    fetchUser()
+  }, [])
+  useEffect(() => {
+    const fetchInterviews = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('mock_interviews')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true })
+
+      console.log("INTERVIEWS:", data, error)
+
+      if (data) {
+        const enrichedData = data.map((item: any) => {
+          const summary = (item.transcript || []).length > 0 && item.transcript[item.transcript.length - 1].isSummary
+            ? item.transcript[item.transcript.length - 1]
+            : null;
+          return {
+            ...item,
+            score: summary?.score !== undefined ? summary.score : item.score,
+            correct: summary?.correct !== undefined ? summary.correct : item.correct,
+            partial: summary?.partial !== undefined ? summary.partial : item.partial,
+            wrong: summary?.wrong !== undefined ? summary.wrong : item.wrong,
+          };
+        });
+
+        setUpcomingInterviews(enrichedData)
+        setMockCount(enrichedData.length)
+
+        const uniqueCompanies = new Set(enrichedData.map((item: any) => item.company))
+        setCompanyCount(uniqueCompanies.size)
+        const completed = enrichedData.filter((item: any) => item.score != null)
+
+        setCompletedInterviews(completed)
+      }
+    }
+
+    fetchInterviews()
+  }, [])
+  useEffect(() => {
+    if (!upcomingInterviews.length) return
+
+    const dates = upcomingInterviews
+      .map((item: any) => new Date(item.date).toDateString())
+
+    const uniqueDates = Array.from(new Set(dates)).sort(
+      (a: any, b: any) => new Date(b).getTime() - new Date(a).getTime()
+    )
+
+    let count = 0
+    let currentDate = new Date()
+
+    for (let i = 0; i < uniqueDates.length; i++) {
+      const d = new Date(uniqueDates[i])
+
+      const diff =
+        (currentDate.setHours(0, 0, 0, 0) - d.setHours(0, 0, 0, 0)) /
+        (1000 * 60 * 60 * 24)
+
+      if (diff === count) {
+        count++
+      } else {
+        break
+      }
+    }
+
+    setStreak(count)
+  }, [upcomingInterviews])
+  useEffect(() => {
+    const fetchRoadmap = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('prep_roadmaps')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      console.log("ROADMAP:", data, error)
+
+      if (data && data.length > 0) {
+        setRoadmap(data[0])
+      } else {
+        setRoadmap(null)
+      }
+    }
+
+    fetchRoadmap()
+  }, [])
+  useEffect(() => {
+    const items = []
+
+    // 1. Latest interview
+    if (upcomingInterviews.length > 0) {
+      const latest = upcomingInterviews[0]
+
+      items.push({
+        type: 'Mock Interview',
+        icon: Target,
+        title: `${latest.company} — ${latest.role}`,
+        desc: latest.round || 'Upcoming round',
+        href: '/mock-interview',
+        accent: 'var(--brand)',
+        accentBg: 'rgba(83,74,183,0.08)',
+        progress: latest.score || 0,
+      })
+    }
+
+    // 2. Roadmap
+    if (roadmap) {
+      items.push({
+        type: 'Roadmap',
+        icon: Map,
+        title: roadmap.title || 'Your roadmap',
+        desc: `${roadmap.progress || 0}% completed`,
+        href: '/roadmap',
+        accent: 'var(--coral)',
+        accentBg: 'rgba(226,75,74,0.08)',
+        progress: roadmap.progress || 0,
+      })
+    }
+
+    setContinueItems(items)
+  }, [upcomingInterviews, roadmap])
   return (
     <div className="min-h-screen font-familjen" style={{ background: 'var(--ghost)', color: 'var(--void)' }}>
 
@@ -273,7 +488,7 @@ export default function DashboardPage() {
 
             <h1 className="font-black text-[30px] md:text-[38px] leading-[1.05] tracking-[-0.03em] flex items-center gap-3"
               style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
-              Hey, {user.name.split(' ')[0]}
+              Hey, {user.name?.split(' ')[0] || 'there'}
               <motion.div
                 animate={{ rotate: [0, 14, -8, 14, 0] }}
                 transition={{ duration: 1.2, delay: 0.6, ease: 'easeInOut' }}
@@ -421,25 +636,88 @@ export default function DashboardPage() {
 
               <motion.div variants={fadeUp} className="rounded-2xl overflow-hidden"
                 style={{ background: '#fff', border: '1.5px solid var(--void-12)' }}>
-                {recentScores.map((r, i) => <ScoreRow key={i} r={r} i={i} />)}
+                {recentScores.map((r, i) => (
+                  <ScoreRow key={i} r={r} i={i} total={recentScores.length} />
+                ))}
               </motion.div>
             </motion.div>
 
-            {/* ── Dashboard illustration ── */}
+            {/* Roadmap Progress */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease, delay: 0.4 }}
-              className="flex items-center justify-center"
+              transition={{ duration: 0.6, ease, delay: 0.45 }}
+              className="rounded-2xl p-5"
+              style={{ background: '#fff', border: '1.5px solid var(--void-12)' }}
             >
-              <Image
-                src="/Dashboard-bro1.png"
-                alt="Dashboard illustration"
-                width={480}
-                height={480}
-                className="object-contain w-full max-w-[480px]"
-                priority={false}
-              />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Map size={16} strokeWidth={1.8} style={{ color: 'var(--coral)' }} />
+                  <p
+                    className="font-mono-frag text-[11px] tracking-[0.09em]"
+                    style={{ color: 'rgba(26,16,53,0.38)' }}
+                  >
+                    ROADMAP PROGRESS
+                  </p>
+                </div>
+
+                <Link
+                  href="/roadmap"
+                  className="text-[12px] font-semibold"
+                  style={{ color: 'var(--brand)' }}
+                >
+                  View all
+                </Link>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <p className="font-bold text-[14px]">
+                      {roadmap?.title || 'No roadmap yet'}
+                    </p>
+                    <span className="text-[12px]" style={{ color: 'rgba(26,16,53,0.45)' }}>
+                      {roadmap?.progress !== undefined ? `${roadmap.progress}%` : '0%'}
+                    </span>
+                  </div>
+
+                  <div
+                    className="h-2 rounded-full overflow-hidden"
+                    style={{ background: 'rgba(26,16,53,0.06)' }}
+                  >
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${roadmap?.progress || 0}%` }}
+                      transition={{ duration: 1 }}
+                      className="h-full rounded-full"
+                      style={{ background: 'var(--coral)' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl p-3" style={{ background: 'rgba(83,74,183,0.05)' }}>
+                    <p className="text-[10px]">Completed</p>
+                    <p className="font-bold text-[18px]">
+                      {roadmap?.completed || 0}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl p-3" style={{ background: 'rgba(239,159,39,0.05)' }}>
+                    <p className="text-[10px]">In Progress</p>
+                    <p className="font-bold text-[18px]">
+                      {roadmap?.inProgress || 0}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl p-3" style={{ background: 'rgba(226,75,74,0.05)' }}>
+                    <p className="text-[10px]">Left</p>
+                    <p className="font-bold text-[18px]">
+                      {roadmap?.left || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
 
           </div>
@@ -584,9 +862,10 @@ export default function DashboardPage() {
                   <span className="text-[15px] mb-3" style={{ color: 'rgba(238,237,254,0.35)' }}>/100</span>
                 </div>
 
+
                 <div className="h-2 rounded-full mb-4 overflow-hidden" style={{ background: 'rgba(238,237,254,0.1)' }}>
                   <motion.div
-                    initial={{ width: 0 }} animate={{ width: '72%' }}
+                    initial={{ width: 0 }} animate={{ width: `${readiness}%` }}
                     transition={{ duration: 1.2, ease, delay: 0.55 }}
                     className="h-full rounded-full relative overflow-hidden"
                     style={{ background: 'var(--lavender)' }}
@@ -599,6 +878,7 @@ export default function DashboardPage() {
                     />
                   </motion.div>
                 </div>
+
 
                 {subScores.map((s, i) => {
                   const Icon = s.icon

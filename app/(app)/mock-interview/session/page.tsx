@@ -10,66 +10,17 @@ import {
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 
-// ── Mock questions by type ────────────────────────────────
-const mockQuestions: Record<string, string[]> = {
-  'DSA': [
-    'Given an array of integers, find the two numbers that add up to a target sum. What is the most optimal approach?',
-    'Explain how you would detect a cycle in a linked list. Walk me through your approach.',
-    'Given a binary tree, write a function to find the maximum path sum between any two nodes.',
-    'How would you implement an LRU cache? What data structures would you use and why?',
-    'Given a string, find the length of the longest substring without repeating characters.',
-  ],
-  'System Design': [
-    'Design a URL shortener like bit.ly. Walk me through your high-level architecture.',
-    'How would you design a notification system that handles 10 million users?',
-    'Design the backend for a real-time collaborative document editor.',
-    'How would you design a distributed rate limiter for an API gateway?',
-  ],
-  'HR / Behavioural': [
-    'Tell me about a time you had a conflict with a teammate. How did you resolve it?',
-    'Describe a project you are most proud of. What was your specific contribution?',
-    'Why do you want to work at this company? What excites you about this role?',
-    'Tell me about a time you failed. What did you learn from it?',
-  ],
-  'Mixed': [
-    'Given an array of integers, find the two numbers that add up to a target sum.',
-    'Tell me about a challenging technical problem you solved. What was your approach?',
-    'Design a simple rate limiter for an API. What data structures would you use?',
-  ],
+type Feedback = {
+  text: string
+  score: number
+  status: 'correct' | 'partial' | 'incorrect'
+  hint: string
 }
-
-const mockFeedback = [
-  {
-    text: 'Good approach! You correctly identified the brute force O(n²) solution. Mentioning the HashMap approach for O(n) time complexity would have strengthened your answer significantly.',
-    score: 78, status: 'partial' as const,
-    hint: 'Think about using a HashMap to store complements as you iterate.',
-  },
-  {
-    text: "Excellent! Floyd's cycle detection algorithm was the optimal approach and you explained it clearly. The time and space complexity analysis was accurate.",
-    score: 92, status: 'correct' as const,
-    hint: 'Consider the two-pointer approach — one slow pointer, one fast pointer.',
-  },
-  {
-    text: 'Your recursive DFS approach was on the right track, but you missed handling the case where the path must go through the root. The base case for leaf nodes needed more clarity.',
-    score: 61, status: 'incorrect' as const,
-    hint: 'At each node: max gain from left + node value + max gain from right.',
-  },
-  {
-    text: 'Great answer! Using a HashMap + doubly linked list is the optimal approach. You correctly identified O(1) for both get and put operations.',
-    score: 88, status: 'correct' as const,
-    hint: 'Think about what data structure gives O(1) insertion and deletion.',
-  },
-  {
-    text: 'You got the sliding window technique right but missed the edge case for single-character strings. Otherwise a solid answer.',
-    score: 74, status: 'partial' as const,
-    hint: 'Use a HashSet to track characters in the current window.',
-  },
-]
 
 type Message = {
   role: 'ai' | 'user'
   text: string
-  feedback?: typeof mockFeedback[0]
+  feedback?: Feedback
   questionIndex?: number
 }
 
@@ -96,22 +47,46 @@ export default function MockInterviewSessionPage() {
   const [totalQ, setTotalQ] = useState(4)
   const [initialized, setInitialized] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [currentHint, setCurrentHint] = useState('')
 
   // Load config from localStorage
   useEffect(() => {
-    const raw = localStorage.getItem('prepos_interview_config')
-    if (!raw) { router.push('/mock-interview'); return }
-    const cfg: Config = JSON.parse(raw)
-    setConfig(cfg)
-    const qs = mockQuestions[cfg.type] || mockQuestions['DSA']
-    const count = Math.min(getQCount(cfg.difficulty), qs.length)
-    setTotalQ(count)
-    setMessages([{
-      role: 'ai',
-      text: `Welcome${cfg.company ? ` to your ${cfg.company}` : ''} ${cfg.type} interview! I'm your AI interviewer. We'll go through ${count} questions. Take your time — quality matters more than speed.\n\nQ1: ${qs[0]}`,
-      questionIndex: 0,
-    }])
-    setInitialized(true)
+    const storedSessionId = localStorage.getItem('prepos_session_id')
+console.log("🔥 SESSION ID FROM LOCALSTORAGE:", storedSessionId)
+
+    if (!storedSessionId) {
+      router.push('/mock-interview')
+      return
+    }
+
+    setSessionId(storedSessionId)
+
+    const loadSession = async () => {
+      const res = await fetch(`/api/mock/${storedSessionId}`)
+      const data = await res.json()
+
+      setConfig({
+        role: data.role,
+        difficulty: data.difficulty,
+        type: data.interview_type,
+        company: data.company,
+        hints: data.hints,
+      })
+      setTotalQ(data.totalQuestions)
+
+      setMessages([
+        {
+          role: 'ai',
+          text: data.firstQuestion,
+          questionIndex: 0,
+        },
+      ])
+
+      setInitialized(true)
+    }
+
+    loadSession()
   }, [router])
 
   // Timer
@@ -128,57 +103,94 @@ export default function MockInterviewSessionPage() {
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-  const handleSend = () => {
-    if (!input.trim() || awaitingFeedback || !config) return
-    const userMsg: Message = { role: 'user', text: input.trim() }
-    setMessages(m => [...m, userMsg])
+  const handleSend = async () => {
+    if (!input.trim() || awaitingFeedback || !sessionId) return
+
+    const answer = input.trim()
+
+    setMessages((m) => [...m, { role: 'user', text: answer }])
     setInput('')
     setAwaitingFeedback(true)
-    setShowHint(false)
 
-    const qs = mockQuestions[config.type] || mockQuestions['DSA']
-    const fb = mockFeedback[currentQ % mockFeedback.length]
+    const res = await fetch(`/api/mock/${sessionId}/answer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        answer,
+        questionIndex: currentQ,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok || data.error) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          text: data.error || 'Something went wrong fetching the evaluation. Please try again.',
+        },
+      ])
+      setAwaitingFeedback(false)
+      return
+    }
+
+    setCurrentHint(data.hint || '')
+
+    setMessages((m) => [
+      ...m,
+      {
+        role: 'ai',
+        text: data.feedback,
+        feedback: {
+          text: data.feedback,
+          score: data.score,
+          status: data.status,
+          hint: data.hint,
+        },
+      },
+    ])
+
+    if (data.finished) {
+      setFinished(true)
+      setAwaitingFeedback(false)
+
+      const finalFeedbacks = [
+        ...messages.filter((m) => m.role === 'ai' && m.feedback).map((m) => m.feedback),
+        { text: data.feedback, score: data.score, status: data.status, hint: data.hint }
+      ]
+
+      const reportData = {
+        config,
+        elapsed,
+        feedbacks: finalFeedbacks,
+        completedAt: new Date().toISOString(),
+        weakAreas: data.reportInfo?.weakAreas || ['System Design Basics', 'General Problem Solving'],
+        reviseTopics: data.reportInfo?.reviseTopics || ['Data Structures', 'Algorithmic Patterns', 'Code Optimization']
+      }
+      
+      localStorage.setItem(`prepos_report_${sessionId}`, JSON.stringify(reportData))
+      return
+    }
 
     setTimeout(() => {
-      setMessages(m => [...m, { role: 'ai', text: fb.text, feedback: fb, questionIndex: currentQ }])
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          text: data.nextQuestion,
+          questionIndex: currentQ + 1,
+        },
+      ])
 
-      const nextQ = currentQ + 1
-      if (nextQ < totalQ) {
-        setTimeout(() => {
-          setMessages(m => [...m, {
-            role: 'ai',
-            text: `Good. Let's continue.\n\nQ${nextQ + 1}: ${qs[nextQ]}`,
-            questionIndex: nextQ,
-          }])
-          setCurrentQ(nextQ)
-          setAwaitingFeedback(false)
-        }, 700)
-      } else {
-        setTimeout(() => {
-          setMessages(m => [...m, {
-            role: 'ai',
-            text: "That wraps up the interview! You did well overall. Let me compile your full performance report...",
-          }])
-          setFinished(true)
-          setAwaitingFeedback(false)
-
-          // Save results to localStorage
-          const results = {
-            config,
-            elapsed,
-            feedbacks: [...Array(totalQ)].map((_, i) => mockFeedback[i % mockFeedback.length]),
-            completedAt: new Date().toISOString(),
-          }
-          const sessionId = Date.now().toString()
-          localStorage.setItem(`prepos_report_${sessionId}`, JSON.stringify(results))
-          localStorage.setItem('prepos_latest_session_id', sessionId)
-        }, 700)
-      }
-    }, 1400)
+      setCurrentQ((q) => q + 1)
+      setAwaitingFeedback(false)
+    }, 900)
   }
-
   const handleViewReport = () => {
-    const sessionId = localStorage.getItem('prepos_latest_session_id')
+    const sessionId = localStorage.getItem('prepos_session_id')
     if (sessionId) router.push(`/mock-interview/report/${sessionId}`)
   }
 
@@ -347,7 +359,7 @@ export default function MockInterviewSessionPage() {
                     <Lightbulb size={13} strokeWidth={1.8}
                       style={{ color: 'var(--amber)', flexShrink: 0, marginTop: 1 }} />
                     <p className="text-[12px] flex-1" style={{ color: 'rgba(26,16,53,0.65)' }}>
-                      {mockFeedback[currentQ % mockFeedback.length].hint}
+                      {currentHint}
                     </p>
                     <button onClick={() => setShowHint(false)} className="cursor-pointer flex-shrink-0">
                       <X size={12} strokeWidth={2} style={{ color: 'rgba(26,16,53,0.3)' }} />

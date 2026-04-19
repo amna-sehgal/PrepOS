@@ -9,6 +9,8 @@ import {
   Layers, ArrowRight, RotateCcw, TrendingUp, Trophy,
   CalendarDays, Zap, Play, Activity, Star,
 } from 'lucide-react'
+import { generateAIRoadmap } from '@/lib/actions/roadmap'
+import RoadmapHistory from '@/components/RoadmapHistory'
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 const fadeUp = {
@@ -28,7 +30,12 @@ type Week = {
   mockInterview: { type: string; role: string } | null
   color: string; bg: string; border: string
 }
-type RoadmapConfig = { role: string; companies: string[]; weeks: number }
+type RoadmapConfig = {
+  role: string
+  companies: string[]
+  weeks: number
+  roadmap?: Week[]
+}
 
 // ── Data ───────────────────────────────────────────────
 const roles = ['SDE Intern', 'SDE-1', 'Data Analyst', 'Product Manager', 'ML Engineer', 'Frontend Dev', 'Backend Dev']
@@ -36,12 +43,12 @@ const companies = ['Google', 'Amazon', 'Flipkart', 'Razorpay', 'Atlassian', 'Mic
 const weekOptions = [4, 6, 8, 10, 12]
 
 const weekColors = [
-  { color: 'var(--brand)',  bg: 'rgba(83,74,183,0.07)',  border: 'rgba(83,74,183,0.2)'  },
-  { color: 'var(--teal)',   bg: 'rgba(29,158,117,0.07)', border: 'rgba(29,158,117,0.2)' },
-  { color: 'var(--amber)',  bg: 'rgba(239,159,39,0.07)', border: 'rgba(239,159,39,0.2)' },
-  { color: '#8B5CF6',       bg: 'rgba(139,92,246,0.07)', border: 'rgba(139,92,246,0.2)' },
-  { color: 'var(--coral)',  bg: 'rgba(226,75,74,0.07)',  border: 'rgba(226,75,74,0.2)'  },
-  { color: 'var(--brand)',  bg: 'rgba(83,74,183,0.07)',  border: 'rgba(83,74,183,0.2)'  },
+  { color: 'var(--brand)', bg: 'rgba(83,74,183,0.07)', border: 'rgba(83,74,183,0.2)' },
+  { color: 'var(--teal)', bg: 'rgba(29,158,117,0.07)', border: 'rgba(29,158,117,0.2)' },
+  { color: 'var(--amber)', bg: 'rgba(239,159,39,0.07)', border: 'rgba(239,159,39,0.2)' },
+  { color: '#8B5CF6', bg: 'rgba(139,92,246,0.07)', border: 'rgba(139,92,246,0.2)' },
+  { color: 'var(--coral)', bg: 'rgba(226,75,74,0.07)', border: 'rgba(226,75,74,0.2)' },
+  { color: 'var(--brand)', bg: 'rgba(83,74,183,0.07)', border: 'rgba(83,74,183,0.2)' },
 ]
 
 // ── Roadmap generator ──────────────────────────────────
@@ -229,9 +236,27 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
   const toggleCompany = (c: string) =>
     setSelected(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setLoading(true)
-    setTimeout(() => { onGenerate({ role, companies: selected, weeks }); setLoading(false) }, 1600)
+
+    try {
+      const data = await generateAIRoadmap({
+        role,
+        companies: selected,
+        weeks,
+      })
+
+      onGenerate({
+        role,
+        companies: selected,
+        weeks,
+        roadmap: data.roadmap,
+      } as any)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -491,7 +516,7 @@ function WeekCard({ week, index, onToggleTopic }: {
                     </p>
                     <div className="flex flex-col gap-2">
                       {week.topics.map((topic, i) => (
-                        <motion.div key={topic.id}
+                        <motion.div key={`${week.week}-${topic.id}-${i}`}
                           initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.05 }}
                           onClick={() => onToggleTopic(week.week, topic.id)}
@@ -500,9 +525,9 @@ function WeekCard({ week, index, onToggleTopic }: {
                           <motion.div whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}>
                             {topic.done
                               ? <CheckCircle2 size={18} strokeWidth={2}
-                                  style={{ color: week.color, flexShrink: 0 }} />
+                                style={{ color: week.color, flexShrink: 0 }} />
                               : <Circle size={18} strokeWidth={1.8}
-                                  style={{ color: 'rgba(26,16,53,0.2)', flexShrink: 0 }} />
+                                style={{ color: 'rgba(26,16,53,0.2)', flexShrink: 0 }} />
                             }
                           </motion.div>
                           <span className="text-[13px] transition-all"
@@ -526,7 +551,7 @@ function WeekCard({ week, index, onToggleTopic }: {
                     </p>
                     <div className="flex flex-col gap-1.5">
                       {week.problems.map((p, i) => (
-                        <div key={i} className="flex items-center gap-2">
+                        <div key={`${week.week}-${p}-${i}`} className="flex items-center gap-2">
                           <ArrowRight size={10} strokeWidth={2} style={{ color: week.color, flexShrink: 0 }} />
                           <span className="text-[12px]" style={{ color: 'rgba(26,16,53,0.65)' }}>{p}</span>
                         </div>
@@ -574,7 +599,7 @@ function WeekCard({ week, index, onToggleTopic }: {
 
 // ── Roadmap view ───────────────────────────────────────
 function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () => void }) {
-  const [weeks, setWeeks] = useState<Week[]>(() => generateRoadmap(config))
+  const [weeks, setWeeks] = useState<Week[]>(config.roadmap || [])
 
   const toggleTopic = (weekNum: number, topicId: string) => {
     setWeeks(prev => prev.map(w =>
@@ -749,10 +774,15 @@ export default function RoadmapPage() {
       <div className="relative max-w-6xl mx-auto">
         <AnimatePresence mode="wait">
           {!config ? (
-            <motion.div key="setup"
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.35, ease }}>
+            <motion.div
+              key="setup"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.35, ease }}
+            >
               <SetupScreen onGenerate={setConfig} />
+              <RoadmapHistory onSelectRoadmap={setConfig} />
             </motion.div>
           ) : (
             <motion.div key="roadmap"

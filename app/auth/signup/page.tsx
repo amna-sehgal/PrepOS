@@ -124,11 +124,7 @@ export default function SignupPage() {
     console.log('signup success')
     setLoading(false)
 
-    if (sessionExists) {
-      router.replace('/dashboard')
-    } else {
-      router.replace('/auth/login')
-    }
+    router.replace('/dashboard')
   }
   return (
     <div className="h-screen overflow-hidden flex font-familjen" style={{ background: 'var(--ghost)' }}>

@@ -7,18 +7,18 @@ export function trackerPrepPrompt(
 ) {
   const daysLeft = interviewDate
     ? Math.ceil(
-        (new Date(interviewDate).getTime() - Date.now()) / 86400000
-      )
+      (new Date(interviewDate).getTime() - Date.now()) / 86400000
+    )
     : 7
 
   const duration =
     daysLeft <= 7
       ? 7
       : daysLeft <= 21
-      ? 14
-      : daysLeft <= 45
-      ? 30
-      : 45
+        ? 14
+        : daysLeft <= 45
+          ? 30
+          : 45
 
   return `
 Create a professional ${duration}-day interview preparation roadmap.
@@ -143,7 +143,13 @@ Return ONLY valid JSON in this exact format:
       "week": 1,
       "title": "Week title",
       "focus": "Focus area",
-      "topics": ["topic1", "topic2"],
+      "topics": [
+  {
+    "id": "w1t1",
+    "label": "Arrays & Strings",
+    "done": false
+  }
+],
       "problems": ["problem1", "problem2"],
       "mockInterview": {
         "type": "DSA",
@@ -161,5 +167,14 @@ Rules:
 - keep practical and realistic
 - no markdown
 - JSON only
+- every topic must contain:
+  - id
+  - label
+  - done
+- done should always default to false
+- generate unique topic ids like w1t1, w1t2
+- every week should contain at least:
+  - 4 topics
+  - 3 problems
 `
 }

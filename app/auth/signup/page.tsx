@@ -105,7 +105,6 @@ export default function SignupPage() {
         email: result.data.email,
         full_name: result.data.name,
         college_name: result.data.college,
-        created_at: new Date().toISOString(),
       })
 
       if (profileError) {

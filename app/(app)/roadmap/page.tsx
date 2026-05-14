@@ -250,7 +250,16 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
         role,
         companies: selected,
         weeks,
-        roadmap: data.roadmap,
+        roadmap:
+          data?.roadmap &&
+            Array.isArray(data.roadmap) &&
+            data.roadmap.length > 0
+            ? data.roadmap
+            : generateRoadmap({
+              role,
+              companies: selected,
+              weeks,
+            }),
       } as any)
     } catch (error) {
       console.error(error)
@@ -467,7 +476,7 @@ function WeekCard({ week, index, onToggleTopic }: {
                 {week.title}
               </p>
               <p className="text-[12px] mt-0.5" style={{ color: 'rgba(26,16,53,0.45)' }}>
-                {week.focus}
+                {week.focus || 'Focus area not generated'}
               </p>
             </div>
 
@@ -535,7 +544,7 @@ function WeekCard({ week, index, onToggleTopic }: {
                               color: topic.done ? 'rgba(26,16,53,0.35)' : 'var(--void)',
                               textDecoration: topic.done ? 'line-through' : 'none',
                             }}>
-                            {topic.label}
+                            {topic.label || 'Topic not generated'}
                           </span>
                         </motion.div>
                       ))}
@@ -551,9 +560,9 @@ function WeekCard({ week, index, onToggleTopic }: {
                     </p>
                     <div className="flex flex-col gap-1.5">
                       {week.problems.map((p, i) => (
-                        <div key={`${week.week}-${p}-${i}`} className="flex items-center gap-2">
+                        <div key={`${week.week}-${p || 'Practice problem not generated'}-${i}`} className="flex items-center gap-2">
                           <ArrowRight size={10} strokeWidth={2} style={{ color: week.color, flexShrink: 0 }} />
-                          <span className="text-[12px]" style={{ color: 'rgba(26,16,53,0.65)' }}>{p}</span>
+                          <span className="text-[12px]" style={{ color: 'rgba(26,16,53,0.65)' }}>{p || 'Practice problem not generated'}</span>
                         </div>
                       ))}
                     </div>
@@ -574,11 +583,18 @@ function WeekCard({ week, index, onToggleTopic }: {
                             Take a mock interview this week
                           </p>
                           <p className="text-[11px]" style={{ color: 'rgba(238,237,254,0.45)' }}>
-                            {week.mockInterview.type} · {week.mockInterview.role}
+                            {week.mockInterview?.type || ''} · {week.mockInterview?.role || ''}
                           </p>
                         </div>
                       </div>
-                      <Link href="/mock-interview" className="no-underline">
+                      <Link
+                        href={`/mock-interview?type=${encodeURIComponent(
+                          week.mockInterview.type
+                        )}&role=${encodeURIComponent(
+                          week.mockInterview.role
+                        )}&week=${week.week}`}
+                        className="no-underline"
+                      >
                         <motion.div whileHover={{ scale: 1.05, x: 2 }} whileTap={{ scale: 0.95 }}
                           className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg cursor-pointer"
                           style={{ background: 'var(--brand)', color: 'var(--mist)', fontFamily: 'var(--font-archivo)' }}>

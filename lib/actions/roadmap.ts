@@ -29,7 +29,46 @@ export async function generateAIRoadmap(input: GenerateRoadmapInput) {
   let parsed
 
   try {
-    parsed = JSON.parse(aiResponse)
+    const cleanedResponse = aiResponse
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim()
+
+    parsed = JSON.parse(cleanedResponse)
+    if (
+      !parsed.weeks ||
+      !Array.isArray(parsed.weeks)
+    ) {
+      throw new Error('Invalid roadmap structure')
+    }
+    parsed.weeks = parsed.weeks.map((week: any, weekIndex: number) => ({
+      ...week,
+
+      topics: (week.topics || []).map(
+        (topic: any, topicIndex: number) => ({
+          id:
+            typeof topic === 'object' && topic.id
+              ? topic.id
+              : `w${weekIndex + 1}t${topicIndex + 1}`,
+
+          label:
+            typeof topic === 'object'
+              ? topic.label || 'Untitled Topic'
+              : topic,
+
+          done:
+            typeof topic === 'object'
+              ? topic.done ?? false
+              : false,
+        })
+      ),
+
+      problems: Array.isArray(week.problems)
+        ? week.problems
+        : [],
+
+      mockInterview: week.mockInterview || null,
+    }))
   } catch {
     throw new Error('AI returned invalid roadmap JSON')
   }

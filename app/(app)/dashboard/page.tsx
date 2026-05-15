@@ -344,7 +344,12 @@ export default function DashboardPage() {
           };
         });
 
-        setUpcomingInterviews(enrichedData)
+        const upcoming = enrichedData.filter(
+          (item: any) => !item.score
+        )
+
+        setUpcomingInterviews(upcoming)
+        
         setMockCount(enrichedData.length)
 
         const uniqueCompanies = new Set(enrichedData.map((item: any) => item.company))

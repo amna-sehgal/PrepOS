@@ -641,6 +641,7 @@ export default function BrainstormClient({
 
                 const safeData = data.map((item: any) => ({
                     ...item,
+                    createdAt: item.created_at,
                     expanded: item.expanded ?? null,
                 }))
 

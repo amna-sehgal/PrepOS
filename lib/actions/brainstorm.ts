@@ -50,11 +50,7 @@ export async function expandBrainstormIdea(id: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistralai/mistral-7b-instruct:free',
-
-        response_format: {
-          type: 'json_object',
-        },
+        model: 'deepseek/deepseek-chat-v3-0324:free',
 
         messages: [
           {
@@ -68,7 +64,7 @@ Never return markdown.
 Never return explanations.
 Never leave fields empty.
 
-Generate realistic, detailed content.
+Generate realistic and detailed content.
 `,
           },
           {
@@ -118,6 +114,8 @@ Requirements:
 
   const aiData = await response.json()
 
+  console.log(aiData)
+
   if (!aiData.choices?.[0]?.message?.content) {
     throw new Error('AI response missing')
   }
@@ -138,7 +136,6 @@ Requirements:
     throw new Error('AI returned invalid JSON')
   }
 
-  // extra validation
   if (
     !expanded.problem ||
     !expanded.solution ||

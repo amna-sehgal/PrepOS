@@ -300,23 +300,6 @@ export default function DashboardPage() {
 
     setReadiness(Math.round(avg))
   }, [completedInterviews])
-  useEffect(() => {
-    if (!completedInterviews.length) return
-
-    const formatted = completedInterviews.slice(0, 3).map((item: any) => ({
-      role: item.role || 'Unknown Role',
-      type: item.type || 'General',
-      score: item.score || 0,
-      date: item.date || '',
-      breakdown: {
-        correct: item.correct || 0,
-        partial: item.partial || 0,
-        wrong: item.wrong || 0,
-      },
-    }))
-
-    setRecentScores(formatted)
-  }, [completedInterviews])
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -343,7 +326,7 @@ export default function DashboardPage() {
         .from('mock_interviews')
         .select('*')
         .eq('user_id', user.id)
-        .order('date', { ascending: true })
+        .order('created_at', { ascending: true })
 
       console.log("INTERVIEWS:", data, error)
 
@@ -366,7 +349,7 @@ export default function DashboardPage() {
 
         const uniqueCompanies = new Set(enrichedData.map((item: any) => item.company))
         setCompanyCount(uniqueCompanies.size)
-        const completed = enrichedData.filter((item: any) => item.score != null)
+        const completed = enrichedData.filter((item: any) => typeof item.score === 'number')
 
         setCompletedInterviews(completed)
       }
@@ -375,33 +358,52 @@ export default function DashboardPage() {
     fetchInterviews()
   }, [])
   useEffect(() => {
-    if (!upcomingInterviews.length) return
+    if (!upcomingInterviews.length) {
+      setStreak(0)
+      return
+    }
 
-    const dates = upcomingInterviews
-      .map((item: any) => new Date(item.date).toDateString())
+    // Step 1: extract valid dates only
+    const validDates = upcomingInterviews
+      .map((item: any) => {
+        if (!item.date) return null
+        const d = new Date(item.date)
+        return isNaN(d.getTime()) ? null : d
+      })
+      .filter(Boolean) as Date[]
 
-    const uniqueDates = Array.from(new Set(dates)).sort(
-      (a: any, b: any) => new Date(b).getTime() - new Date(a).getTime()
+    if (validDates.length === 0) {
+      setStreak(0)
+      return
+    }
+
+    // Step 2: convert to unique day strings (normalized to midnight)
+    const uniqueDays = Array.from(
+      new Set(
+        validDates.map((d) =>
+          new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+        )
+      )
     )
 
-    let count = 0
-    let currentDate = new Date()
+    // Step 3: sort descending (latest first)
+    uniqueDays.sort((a, b) => b - a)
 
-    for (let i = 0; i < uniqueDates.length; i++) {
-      const d = new Date(uniqueDates[i])
+    // Step 4: calculate streak
+    let streakCount = 0
+    const today = new Date().setHours(0, 0, 0, 0)
 
-      const diff =
-        (currentDate.setHours(0, 0, 0, 0) - d.setHours(0, 0, 0, 0)) /
-        (1000 * 60 * 60 * 24)
+    for (let i = 0; i < uniqueDays.length; i++) {
+      const expectedDay = today - i * 24 * 60 * 60 * 1000
 
-      if (diff === count) {
-        count++
+      if (uniqueDays[i] === expectedDay) {
+        streakCount++
       } else {
         break
       }
     }
 
-    setStreak(count)
+    setStreak(streakCount)
   }, [upcomingInterviews])
   useEffect(() => {
     const fetchRoadmap = async () => {

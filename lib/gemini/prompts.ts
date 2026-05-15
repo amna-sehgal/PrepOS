@@ -65,6 +65,7 @@ Rules:
 - Keep it concise
 - No explanation
 - Return only the question text
+- Do NOT normalize scores. You are not averaging. You are judging.
 `
 }
 
@@ -74,49 +75,65 @@ export function evaluateAnswerPrompt(
   config: InterviewConfig
 ) {
   return `
-You are an expert technical interviewer conducting a realistic mock interview.
+You are a STRICT FAANG interview evaluator.
 
-Interview Details:
-- Role: ${config.role}
-- Interview Type: ${config.type}
-- Difficulty: ${config.difficulty}
+You do NOT be friendly. You do NOT be lenient.
+You grade like an Amazon/Google interviewer.
 
-Question:
+---
+
+QUESTION:
 ${question}
 
-Candidate Answer:
+ANSWER:
 ${answer}
 
-Your job:
-- Evaluate the answer honestly
-- Do NOT inflate scores
-- Strong answers: 80-95
-- Average answers: 60-79
-- Weak answers: 30-59
-- Very poor/irrelevant answers: below 30
+---
 
-Return ONLY valid JSON.
+EVALUATION RULES:
 
-JSON format:
+Score honestly using this rubric:
+
+90–100:
+- Excellent structure (STAR method or equivalent)
+- Specific technical details
+- Clear real-world impact or depth
+- Strong communication
+
+75–89:
+- Good answer
+- Some specificity missing OR weak depth
+- Still correct and structured
+
+60–74:
+- Basic answer
+- Generic explanations
+- Missing technical depth
+
+40–59:
+- Weak understanding
+- Vague or incomplete
+
+0–39:
+- Incorrect or irrelevant
+
+---
+
+IMPORTANT RULES:
+- Be strict, not generous
+- Do NOT default to 80–90
+- Avoid rounding to nice numbers
+- Scores must reflect real quality gaps
+
+---
+
+Return ONLY valid JSON:
+
 {
-  "feedback": "clear constructive feedback",
-  "score": 0,
-  "status": "correct",
-  "hint": "short helpful improvement hint",
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"]
+  "feedback": "2-4 lines of honest critique",
+  "score": number,
+  "status": "correct | partial | incorrect"
 }
-
-Rules:
-- feedback should be concise but useful
-- hint should help improve the answer
-- strengths/improvements should be short bullet-style phrases
-- status values allowed:
-  - correct
-  - partial
-  - incorrect
-- NEVER return markdown
-- NEVER wrap JSON in code blocks
 `
 }
 export function generateNextQuestionPrompt(

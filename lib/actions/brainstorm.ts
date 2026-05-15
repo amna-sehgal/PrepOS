@@ -50,7 +50,7 @@ export async function expandBrainstormIdea(id: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'openai/gpt-3.5-turbo',
 
         messages: [
           {
@@ -58,11 +58,11 @@ export async function expandBrainstormIdea(id: string) {
             content: `
 You are an expert startup and hackathon mentor.
 
-You MUST return STRICT VALID JSON ONLY.
+Return ONLY valid JSON.
 
-Never return markdown.
-Never return explanations.
-Never leave fields empty.
+No markdown.
+No code blocks.
+No explanations.
 
 Generate realistic and detailed content.
 `,
@@ -70,41 +70,40 @@ Generate realistic and detailed content.
           {
             role: 'user',
             content: `
-Convert this project idea into a detailed project proposal.
+Convert this project idea into a detailed proposal.
 
 Title: ${idea.title}
 
 Description:
 ${idea.description}
 
-Return EXACTLY this JSON structure:
+Return EXACTLY this structure:
 
 {
-  "problem": "string",
-  "solution": "string",
-  "features": ["string"],
+  "problem": "",
+  "solution": "",
+  "features": [],
   "techStack": [
     {
-      "name": "string",
-      "reason": "string"
+      "name": "",
+      "reason": ""
     }
   ],
   "timeline": {
-    "solo": "string",
-    "team": "string"
+    "solo": "",
+    "team": ""
   },
-  "resumeScore": 8.5,
-  "resumeReason": "string",
-  "similarProjects": ["string"]
+  "resumeScore": 8,
+  "resumeReason": "",
+  "similarProjects": []
 }
 
 Requirements:
-- At least 5 features
-- At least 4 tech stack items
-- resumeScore must be between 1 and 10
-- Make everything realistic
-- Do not use placeholders
-- JSON only
+- minimum 5 features
+- minimum 4 tech stack items
+- realistic output
+- resumeScore between 1 and 10
+- JSON ONLY
 `,
           },
         ],
@@ -114,13 +113,13 @@ Requirements:
 
   const aiData = await response.json()
 
-  console.log(aiData)
+  console.log('AI DATA:', aiData)
 
-  if (!aiData.choices?.[0]?.message?.content) {
+  const raw = aiData?.choices?.[0]?.message?.content
+
+  if (!raw) {
     throw new Error('AI response missing')
   }
-
-  const raw = aiData.choices[0].message.content
 
   const cleaned = raw
     .replace(/```json/g, '')
@@ -132,8 +131,27 @@ Requirements:
   try {
     expanded = JSON.parse(cleaned)
   } catch (err) {
-    console.error('Invalid AI JSON:', cleaned)
-    throw new Error('AI returned invalid JSON')
+    console.error('JSON PARSE FAILED')
+    console.error(cleaned)
+
+    expanded = {
+      problem: 'AI generation failed',
+      solution: 'Could not generate proposal',
+      features: ['Try again'],
+      techStack: [
+        {
+          name: 'Next.js',
+          reason: 'Frontend framework',
+        },
+      ],
+      timeline: {
+        solo: 'Unknown',
+        team: 'Unknown',
+      },
+      resumeScore: 5,
+      resumeReason: 'Fallback response',
+      similarProjects: [],
+    }
   }
 
   if (
@@ -142,7 +160,24 @@ Requirements:
     !Array.isArray(expanded.features) ||
     !Array.isArray(expanded.techStack)
   ) {
-    throw new Error('Incomplete AI response')
+    expanded = {
+      problem: 'AI returned incomplete response',
+      solution: 'Please try again',
+      features: ['Retry generation'],
+      techStack: [
+        {
+          name: 'Next.js',
+          reason: 'Frontend framework',
+        },
+      ],
+      timeline: {
+        solo: 'Unknown',
+        team: 'Unknown',
+      },
+      resumeScore: 5,
+      resumeReason: 'Fallback response',
+      similarProjects: [],
+    }
   }
 
   const { data, error } = await supabase

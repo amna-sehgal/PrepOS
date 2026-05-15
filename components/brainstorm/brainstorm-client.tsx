@@ -250,11 +250,13 @@ function ExpandModal({ idea, onClose }: { idea: Idea; onClose: () => void }) {
         }
     }
     const [loading, setLoading] = useState(!idea.expanded)
-    const [proposal, setProposal] = useState<ExpandedProposal | null>(idea.expanded || null)
 
-    useState(() => {
+    const [proposal, setProposal] =
+        useState<ExpandedProposal | null>(idea.expanded || null)
+
+    useEffect(() => {
         if (!idea.expanded) {
-            setTimeout(async () => {
+            const timer = setTimeout(async () => {
                 const proposal = mockProposals.default
 
                 setProposal(proposal)
@@ -263,8 +265,10 @@ function ExpandModal({ idea, onClose }: { idea: Idea; onClose: () => void }) {
 
                 setLoading(false)
             }, 2000)
+
+            return () => clearTimeout(timer)
         }
-    })
+    }, [idea])
 
     const scoreColor = (s: number) => s >= 8 ? 'var(--teal)' : s >= 6 ? 'var(--amber)' : 'var(--coral)'
 

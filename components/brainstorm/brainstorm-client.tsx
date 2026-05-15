@@ -600,7 +600,12 @@ function IdeaCard({
             <div className="flex items-center justify-between mt-auto pt-2"
                 style={{ borderTop: '1px solid rgba(26,16,53,0.07)' }}>
                 <span className="font-mono-frag text-[10px]" style={{ color: 'rgba(26,16,53,0.3)' }}>
-                    {new Date(idea.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    {new Date(
+                        (idea as any).createdAt || (idea as any).created_at
+                    ).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                    })}
                 </span>
                 <motion.button
                     whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}

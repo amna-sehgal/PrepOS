@@ -349,7 +349,7 @@ export default function DashboardPage() {
         )
 
         setUpcomingInterviews(upcoming)
-        
+
         setMockCount(enrichedData.length)
 
         const uniqueCompanies = new Set(enrichedData.map((item: any) => item.company))
@@ -377,9 +377,26 @@ export default function DashboardPage() {
     }
 
     fetchInterviews()
+    const channel = supabase
+      .channel('mock-interviews-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mock_interviews',
+        },
+        () => {
+          fetchInterviews()
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
   useEffect(() => {
-    if (!completedInterviews.length){
+    if (!completedInterviews.length) {
       setStreak(0)
       return
     }

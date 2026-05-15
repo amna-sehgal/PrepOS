@@ -88,10 +88,12 @@ export async function POST(
 
       parsed = {
         feedback:
-          'Your answer was received, but feedback parsing failed. Please continue.',
-        score: 50,
+          'Your answer was received, but evaluation failed.',
+        score: 40,
         status: 'incorrect',
-        hint: '',
+        hint: 'Try giving a more structured and detailed answer.',
+        strengths: [],
+        improvements: [],
       }
     }
 
@@ -220,6 +222,8 @@ export async function POST(
       score: parsed.score,
       status: parsed.status,
       hint: parsed.hint,
+      strengths: parsed.strengths || [],
+      improvements: parsed.improvements || [],
       finished,
       nextQuestion,
       reportInfo,

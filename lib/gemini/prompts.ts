@@ -74,27 +74,49 @@ export function evaluateAnswerPrompt(
   config: InterviewConfig
 ) {
   return `
-You are evaluating a student's mock interview answer.
+You are an expert technical interviewer conducting a realistic mock interview.
 
-Role: ${config.role}
-Type: ${config.type}
-Difficulty: ${config.difficulty}
+Interview Details:
+- Role: ${config.role}
+- Interview Type: ${config.type}
+- Difficulty: ${config.difficulty}
 
 Question:
 ${question}
 
-Student Answer:
+Candidate Answer:
 ${answer}
 
-Return JSON in this exact format:
+Your job:
+- Evaluate the answer honestly
+- Do NOT inflate scores
+- Strong answers: 80-95
+- Average answers: 60-79
+- Weak answers: 30-59
+- Very poor/irrelevant answers: below 30
+
+Return ONLY valid JSON.
+
+JSON format:
 {
-  "feedback": "short constructive feedback",
-  "score": 85,
-  "status": "correct"
+  "feedback": "clear constructive feedback",
+  "score": 0,
+  "status": "correct",
+  "hint": "short helpful improvement hint",
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"]
 }
 
-Status must be one of:
-correct | partial | incorrect
+Rules:
+- feedback should be concise but useful
+- hint should help improve the answer
+- strengths/improvements should be short bullet-style phrases
+- status values allowed:
+  - correct
+  - partial
+  - incorrect
+- NEVER return markdown
+- NEVER wrap JSON in code blocks
 `
 }
 export function generateNextQuestionPrompt(

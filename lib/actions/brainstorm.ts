@@ -41,54 +41,87 @@ export async function expandBrainstormIdea(id: string) {
 
   if (fetchError) throw new Error(fetchError.message)
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'openrouter/free',
-      messages: [
-        {
-          role: 'user',
-          content: `
-Convert this idea into STRICT valid JSON only.
+  const response = await fetch(
+    'https://openrouter.ai/api/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'mistralai/mistral-7b-instruct:free',
 
-IMPORTANT RULES:
-- Return only raw JSON
-- No markdown
-- No code blocks
-- resumeScore must be a number between 1 and 10 only
-- decimals allowed like 8.5
-- NEVER use percentage or values above 10
+        response_format: {
+          type: 'json_object',
+        },
 
-JSON format:
-{
-  "problem": "",
-  "solution": "",
-  "features": [],
-  "techStack": [
-    { "name": "", "reason": "" }
-  ],
-  "timeline": {
-    "solo": "",
-    "team": ""
-  },
-  "resumeScore": 0,
-  "resumeReason": "",
-  "similarProjects": []
-}
+        messages: [
+          {
+            role: 'system',
+            content: `
+You are an expert startup and hackathon mentor.
+
+You MUST return STRICT VALID JSON ONLY.
+
+Never return markdown.
+Never return explanations.
+Never leave fields empty.
+
+Generate realistic, detailed content.
+`,
+          },
+          {
+            role: 'user',
+            content: `
+Convert this project idea into a detailed project proposal.
 
 Title: ${idea.title}
-Description: ${idea.description}
-          `,
-        },
-      ],
-    }),
-  })
+
+Description:
+${idea.description}
+
+Return EXACTLY this JSON structure:
+
+{
+  "problem": "string",
+  "solution": "string",
+  "features": ["string"],
+  "techStack": [
+    {
+      "name": "string",
+      "reason": "string"
+    }
+  ],
+  "timeline": {
+    "solo": "string",
+    "team": "string"
+  },
+  "resumeScore": 8.5,
+  "resumeReason": "string",
+  "similarProjects": ["string"]
+}
+
+Requirements:
+- At least 5 features
+- At least 4 tech stack items
+- resumeScore must be between 1 and 10
+- Make everything realistic
+- Do not use placeholders
+- JSON only
+`,
+          },
+        ],
+      }),
+    }
+  )
 
   const aiData = await response.json()
+
+  if (!aiData.choices?.[0]?.message?.content) {
+    throw new Error('AI response missing')
+  }
+
   const raw = aiData.choices[0].message.content
 
   const cleaned = raw
@@ -96,7 +129,24 @@ Description: ${idea.description}
     .replace(/```/g, '')
     .trim()
 
-  const expanded = JSON.parse(cleaned)
+  let expanded
+
+  try {
+    expanded = JSON.parse(cleaned)
+  } catch (err) {
+    console.error('Invalid AI JSON:', cleaned)
+    throw new Error('AI returned invalid JSON')
+  }
+
+  // extra validation
+  if (
+    !expanded.problem ||
+    !expanded.solution ||
+    !Array.isArray(expanded.features) ||
+    !Array.isArray(expanded.techStack)
+  ) {
+    throw new Error('Incomplete AI response')
+  }
 
   const { data, error } = await supabase
     .from('brainstorm_cards')

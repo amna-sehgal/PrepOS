@@ -352,6 +352,22 @@ export default function DashboardPage() {
         const completed = enrichedData.filter((item: any) => typeof item.score === 'number')
 
         setCompletedInterviews(completed)
+        setRecentScores(
+          completed
+            .slice(-5)
+            .reverse()
+            .map((item: any) => ({
+              role: item.role,
+              type: item.type || 'Mock',
+              date: item.date || 'Recently',
+              score: item.score || 0,
+              breakdown: {
+                correct: item.correct || 0,
+                partial: item.partial || 0,
+                wrong: item.wrong || 0,
+              },
+            }))
+        )
       }
     }
 

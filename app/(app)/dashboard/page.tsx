@@ -379,13 +379,13 @@ export default function DashboardPage() {
     fetchInterviews()
   }, [])
   useEffect(() => {
-    if (!upcomingInterviews.length) {
+    if (!completedInterviews.length){
       setStreak(0)
       return
     }
 
     // Step 1: extract valid dates only
-    const validDates = upcomingInterviews
+    const validDates = completedInterviews
       .map((item: any) => {
         if (!item.date) return null
         const d = new Date(item.date)
@@ -425,7 +425,7 @@ export default function DashboardPage() {
     }
 
     setStreak(streakCount)
-  }, [upcomingInterviews])
+  }, [completedInterviews])
   useEffect(() => {
     const fetchRoadmap = async () => {
       const { data: { user } } = await supabase.auth.getUser()

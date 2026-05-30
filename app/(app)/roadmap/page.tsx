@@ -617,12 +617,29 @@ function WeekCard({ week, index, onToggleTopic }: {
 function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () => void }) {
   const [weeks, setWeeks] = useState<Week[]>(config.roadmap || [])
 
-  const toggleTopic = (weekNum: number, topicId: string) => {
-    setWeeks(prev => prev.map(w =>
-      w.week === weekNum
-        ? { ...w, topics: w.topics.map(t => t.id === topicId ? { ...t, done: !t.done } : t) }
-        : w
-    ))
+  const toggleTopic = async (weekNum: number, topicId: string) => {
+    // 1. update UI immediately (you already had this)
+    setWeeks(prev =>
+      prev.map(w =>
+        w.week === weekNum
+          ? {
+            ...w,
+            topics: w.topics.map(t =>
+              t.id === topicId ? { ...t, done: !t.done } : t
+            )
+          }
+          : w
+      )
+    )
+
+    // 2. save to database (NEW PART)
+    await fetch("/api/roadmap/toggle", {
+      method: "POST",
+      body: JSON.stringify({
+        week: weekNum,
+        topicId,
+      }),
+    })
   }
 
   const totalTopics = weeks.reduce((a, w) => a + w.topics.length, 0)

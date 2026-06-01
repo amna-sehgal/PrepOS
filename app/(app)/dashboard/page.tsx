@@ -48,28 +48,6 @@ function useCountUp(target: number, duration = 1200, delay = 0) {
   }, [target, duration, delay])
   return count
 }
-
-const aiActions = [
-  {
-    icon: AlertTriangle, title: 'Razorpay interview in 3 days',
-    desc: 'Your 7-day prep plan is ready. Focus: Arrays, Trees, OS basics.',
-    cta: 'View prep plan', href: '/tracker',
-    accent: 'var(--coral)', bg: 'rgba(226,75,74,0.07)', border: 'rgba(226,75,74,0.18)',
-  },
-  {
-    icon: Lightbulb, title: 'You have 2 unstructured ideas',
-    desc: '"ML Resume Screener" and "DSA Visualiser" are sitting in your board.',
-    cta: 'Expand with AI', href: '/brainstorm',
-    accent: 'var(--brand)', bg: 'rgba(83,74,183,0.07)', border: 'rgba(83,74,183,0.18)',
-  },
-  {
-    icon: BrainCircuit, title: 'Weak area: Dynamic Programming',
-    desc: 'Based on your last 3 interviews. Revise before your next session.',
-    cta: 'Start practice', href: '/mock-interview',
-    accent: 'var(--amber)', bg: 'rgba(239,159,39,0.07)', border: 'rgba(239,159,39,0.18)',
-  },
-]
-
 const quickActions = [
   { label: 'Start Mock Interview', icon: Mic2, href: '/mock-interview' },
   { label: 'Log a Company', icon: KanbanSquare, href: '/tracker' },
@@ -219,38 +197,6 @@ export default function DashboardPage() {
   })
   const [readiness, setReadiness] = useState(0)
   const [completedInterviews, setCompletedInterviews] = useState<any[]>([])
-  const subScores = [
-    {
-      label: 'DSA',
-      val: Math.round(
-        completedInterviews
-          .filter((i: any) => i.type === 'DSA')
-          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
-        (completedInterviews.filter((i: any) => i.type === 'DSA').length || 1)
-      ),
-      icon: Activity,
-    },
-    {
-      label: 'System Design',
-      val: Math.round(
-        completedInterviews
-          .filter((i: any) => i.type === 'System Design')
-          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
-        (completedInterviews.filter((i: any) => i.type === 'System Design').length || 1)
-      ),
-      icon: BrainCircuit,
-    },
-    {
-      label: 'Behavioural',
-      val: Math.round(
-        completedInterviews
-          .filter((i: any) => i.type === 'Behavioural')
-          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
-        (completedInterviews.filter((i: any) => i.type === 'Behavioural').length || 1)
-      ),
-      icon: Trophy,
-    },
-  ]
 
   const [continueItems, setContinueItems] = useState<any[]>([])
   const [roadmap, setRoadmap] = useState<any>(null)
@@ -264,6 +210,8 @@ export default function DashboardPage() {
   const [companyCount, setCompanyCount] = useState(0)
   const [streak, setStreak] = useState(0)
   const [recentScores, setRecentScores] = useState<any[]>([])
+  const [brainstormCards, setBrainstormCards] = useState<any[]>([])
+  const [aiActions, setAiActions] = useState<any[]>([])
   const stats = [
     { label: 'Mock Interviews', value: mockCount, suffix: '', sub: '+3 this week', color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
     {
@@ -318,6 +266,24 @@ export default function DashboardPage() {
     fetchUser()
   }, [])
   useEffect(() => {
+    const fetchBrainstormCards = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data } = await supabase
+        .from('brainstorm_cards')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (data) setBrainstormCards(data)
+    }
+
+    fetchBrainstormCards()
+  }, [])
+  useEffect(() => {
     const fetchInterviews = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -344,9 +310,19 @@ export default function DashboardPage() {
           };
         });
 
-        const upcoming = enrichedData.filter(
-          (item: any) => !item.score
-        )
+        const upcoming = enrichedData
+          .filter((item: any) => !item.score)
+          .map((item: any) => {
+            // Calculate days left
+            const interviewDate = item.date ? new Date(item.date) : new Date()
+            const today = new Date()
+            const daysLeft = Math.ceil((interviewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+            return {
+              ...item,
+              daysLeft: Math.max(0, daysLeft),
+            }
+          })
+          .filter((item: any) => item.daysLeft > 0)  // Only show actual upcoming interviews
 
         setUpcomingInterviews(upcoming)
 
@@ -458,13 +434,56 @@ export default function DashboardPage() {
       console.log("ROADMAP:", data, error)
 
       if (data && data.length > 0) {
-        setRoadmap(data[0])
+        const roadmapData = data[0]
+
+        // Calculate progress from weeks array
+        if (roadmapData.roadmap && Array.isArray(roadmapData.roadmap)) {
+          const weeks = roadmapData.roadmap
+          const totalTopics = weeks.reduce((sum: number, w: any) => sum + (w.topics?.length || 0), 0)
+          const completedTopics = weeks.reduce((sum: number, w: any) => sum + (w.topics?.filter((t: any) => t.done)?.length || 0), 0)
+          const remainingTopics = totalTopics - completedTopics
+          const progress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0
+
+          // Find current week (first week with incomplete topics)
+          const currentWeek = weeks.findIndex((w: any) => w.topics?.some((t: any) => !t.done)) + 1 || weeks.length
+
+          setRoadmap({
+            ...roadmapData,
+            progress,
+            completed: completedTopics,
+            left: remainingTopics,
+            inProgress: currentWeek,
+            title: roadmapData.role || 'Your Roadmap',
+          })
+        } else {
+          setRoadmap(roadmapData)
+        }
       } else {
         setRoadmap(null)
       }
     }
 
     fetchRoadmap()
+
+    // Subscribe to real-time roadmap updates
+    const channel = supabase
+      .channel('prep-roadmaps-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prep_roadmaps',
+        },
+        () => {
+          fetchRoadmap()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
   useEffect(() => {
     const items = []
@@ -501,6 +520,139 @@ export default function DashboardPage() {
 
     setContinueItems(items)
   }, [upcomingInterviews, roadmap])
+
+  useEffect(() => {
+    const suggestions: any[] = []
+
+    // 1. Urgent prep for upcoming interview (within 3 days)
+    if (upcomingInterviews.length > 0) {
+      const urgentInterview = upcomingInterviews.find((i: any) => i.daysLeft <= 3)
+      if (urgentInterview) {
+        suggestions.push({
+          icon: AlertTriangle,
+          title: `${urgentInterview.company} interview in ${urgentInterview.daysLeft} day${urgentInterview.daysLeft > 1 ? 's' : ''}`,
+          desc: `${urgentInterview.role} role. Final prep: focus on ${urgentInterview.type || 'DSA'} fundamentals.`,
+          cta: 'Start prep',
+          href: '/mock-interview',
+          accent: 'var(--coral)',
+          bg: 'rgba(226,75,74,0.07)',
+          border: 'rgba(226,75,74,0.18)',
+        })
+      }
+    }
+
+    // 2. Weak areas from completed interviews
+    const weakAreaCount: Record<string, number> = {}
+    completedInterviews.forEach((interview: any) => {
+      interview.weak_areas?.forEach((area: string) => {
+        weakAreaCount[area] = (weakAreaCount[area] || 0) + 1
+      })
+    })
+
+    const weakest = Object.entries(weakAreaCount)
+      .sort((a, b) => b[1] - a[1])[0]
+
+    if (weakest && suggestions.length < 3) {
+      suggestions.push({
+        icon: BrainCircuit,
+        title: `Weak area: ${weakest[0]}`,
+        desc: `Appeared ${weakest[1]} time${weakest[1] > 1 ? 's' : ''} in your interview reports.`,
+        cta: 'Practice now',
+        href: '/mock-interview',
+        accent: 'var(--amber)',
+        bg: 'rgba(239,159,39,0.07)',
+        border: 'rgba(239,159,39,0.18)',
+      })
+    }
+
+    // 3. Low readiness in specific category
+    if (completedInterviews.length > 0 && suggestions.length < 3) {
+      const dsaAvg = Math.round(
+        completedInterviews
+          .filter((i: any) => i.type === 'DSA')
+          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (completedInterviews.filter((i: any) => i.type === 'DSA').length || 1)
+      )
+      const sdAvg = Math.round(
+        completedInterviews
+          .filter((i: any) => i.type === 'System Design')
+          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (completedInterviews.filter((i: any) => i.type === 'System Design').length || 1)
+      )
+
+      if (dsaAvg < 60 && dsaAvg > 0) {
+        suggestions.push({
+          icon: Activity,
+          title: 'DSA score is slipping',
+          desc: `Your DSA avg is ${dsaAvg}%. Time to revisit data structures & algorithms.`,
+          cta: 'Take DSA mock',
+          href: '/mock-interview',
+          accent: 'var(--coral)',
+          bg: 'rgba(226,75,74,0.07)',
+          border: 'rgba(226,75,74,0.18)',
+        })
+      } else if (sdAvg < 60 && sdAvg > 0) {
+        suggestions.push({
+          icon: BrainCircuit,
+          title: 'System Design needs work',
+          desc: `Your System Design avg is ${sdAvg}%. Strengthen architecture fundamentals.`,
+          cta: 'Practice SD',
+          href: '/mock-interview',
+          accent: 'var(--amber)',
+          bg: 'rgba(239,159,39,0.07)',
+          border: 'rgba(239,159,39,0.18)',
+        })
+      }
+    }
+
+    // 4. Roadmap stalled
+    if (roadmap && roadmap.progress < 30 && suggestions.length < 3) {
+      suggestions.push({
+        icon: Map,
+        title: 'Roadmap needs attention',
+        desc: `You're ${roadmap.progress}% through. Pick 2-3 topics this week.`,
+        cta: 'View roadmap',
+        href: '/roadmap',
+        accent: 'var(--brand)',
+        bg: 'rgba(83,74,183,0.07)',
+        border: 'rgba(83,74,183,0.18)',
+      })
+    }
+
+    // 5. Motivation for streak
+    if (streak > 0 && streak < 7 && suggestions.length < 3) {
+      suggestions.push({
+        icon: Flame,
+        title: `${streak}-day streak! Keep it going`,
+        desc: `You're on fire 🔥 One more mock to keep the momentum.`,
+        cta: 'Start mock',
+        href: '/mock-interview',
+        accent: 'var(--amber)',
+        bg: 'rgba(239,159,39,0.07)',
+        border: 'rgba(239,159,39,0.18)',
+      })
+    }
+
+    // 6. Brainstorm ideas need expansion
+    if (brainstormCards.length > 0 && suggestions.length < 3) {
+      const unstructuredCards = brainstormCards.filter((c: any) => !c.isExpanded)
+      if (unstructuredCards.length > 0) {
+        suggestions.push({
+          icon: Lightbulb,
+          title: `You have ${unstructuredCards.length} unstructured idea${unstructuredCards.length > 1 ? 's' : ''}`,
+          desc: `"${unstructuredCards[0].title}" and others are waiting to be expanded.`,
+          cta: 'Expand with AI',
+          href: '/brainstorm',
+          accent: 'var(--brand)',
+          bg: 'rgba(83,74,183,0.07)',
+          border: 'rgba(83,74,183,0.18)',
+        })
+      }
+    }
+
+    // Keep only top 3 most relevant suggestions
+    setAiActions(suggestions.slice(0, 3))
+  }, [completedInterviews, upcomingInterviews, roadmap, streak, brainstormCards])
   return (
     <div className="min-h-screen font-familjen" style={{ background: 'var(--ghost)', color: 'var(--void)' }}>
 
@@ -744,7 +896,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="rounded-xl p-3" style={{ background: 'rgba(239,159,39,0.05)' }}>
-                    <p className="text-[10px]">In Progress</p>
+                    <p className="text-[10px]">Current Week</p>
                     <p className="font-bold text-[18px]">
                       {roadmap?.inProgress || 0}
                     </p>

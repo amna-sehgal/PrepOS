@@ -6,10 +6,10 @@ import {
   Plus, X, Download, Sparkles, CalendarClock, Building2,
   ChevronDown, FileText, Trash2, Edit3, CheckCircle2,
   Clock, AlertTriangle, ArrowRight, KanbanSquare, GripVertical,
-  Briefcase, Tag, StickyNote, Calendar, Save, ExternalLink,
+  Briefcase, Tag, StickyNote, Calendar, Save, ExternalLink, Bell,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { generatePrepPlan } from '@/lib/actions/tracker'
+import { generatePrepPlan, sendReminderEmail } from '@/lib/actions/tracker'
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 
@@ -402,6 +402,7 @@ function KanbanCard({
   onMove: (dir: 'left' | 'right') => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sendingReminder, setSendingReminder] = useState(false)
   const days = daysUntil(entry.interviewDate)
   const ds = daysStyle(days)
   const colIdx = columns.findIndex(c => c.status === entry.status)
@@ -464,6 +465,7 @@ function KanbanCard({
                 {[
                   { label: 'Edit entry', icon: Edit3, action: () => { onEdit(); setMenuOpen(false) } },
                   { label: 'AI Prep Plan', icon: Sparkles, action: () => { onPrepPlan(); setMenuOpen(false) } },
+                  ...(entry.interviewDate && entry.status === 'Interview' ? [{ label: 'Send Reminder', icon: Bell, action: async () => { setSendingReminder(true); try { await sendReminderEmail({ entryId: entry.id, company: entry.company, role: entry.role, interviewDate: entry.interviewDate, round: entry.round }); } catch (e) { console.error(e) } finally { setSendingReminder(false); setMenuOpen(false) } }, loading: sendingReminder }] : []),
                   ...(colIdx > 0 ? [{ label: 'Move left', icon: ArrowRight, action: () => { onMove('left'); setMenuOpen(false) }, flip: true }] : []),
                   ...(colIdx < columns.length - 1 ? [{ label: 'Move right', icon: ArrowRight, action: () => { onMove('right'); setMenuOpen(false) } }] : []),
                   { label: 'Delete', icon: Trash2, action: () => { onDelete(); setMenuOpen(false) }, danger: true },
@@ -495,6 +497,7 @@ function KanbanCard({
       {/* Interview date + days left */}
       {entry.interviewDate && ds && (
         <div className="flex items-center gap-1.5 mb-2">
+
           <CalendarClock size={11} strokeWidth={1.8} style={{ color: ds.color }} />
           <span className="text-[11px]" style={{ color: 'rgba(26,16,53,0.45)' }}>
             {new Date(entry.interviewDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -659,25 +662,33 @@ export default function TrackerPage() {
       prep_plan: e.prepPlan || '',
     }
 
+    let savedSuccessfully = false
+
     if (entries.find(x => x.id === e.id)) {
-      await supabase
+      const { error } = await supabase
         .from('tracker_entries')
         .update(payload)
         .eq('id', e.id)
 
-      setEntries(prev =>
-        prev.map(item =>
-          item.id === e.id ? e : item
+      if (!error) {
+        savedSuccessfully = true
+
+        setEntries(prev =>
+          prev.map(item =>
+            item.id === e.id ? e : item
+          )
         )
-      )
+      }
     } else {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('tracker_entries')
         .insert(payload)
         .select()
         .single()
 
-      if (data) {
+      if (!error && data) {
+        savedSuccessfully = true
+
         setEntries(prev => [
           {
             id: data.id,
@@ -697,7 +708,6 @@ export default function TrackerPage() {
 
     setModalEntry(null)
   }
-
   const deleteEntry = async (id: string) => {
     await supabase
       .from('tracker_entries')

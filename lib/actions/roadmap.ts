@@ -91,3 +91,35 @@ export async function generateAIRoadmap(input: GenerateRoadmapInput) {
 
   return data
 }
+
+export async function updateRoadmapProgress(
+  roadmapId: string,
+  updatedWeeks: any[]
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data, error } = await supabase
+    .from('prep_roadmaps')
+    .update({
+      roadmap: updatedWeeks,
+    })
+    .eq('id', roadmapId)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data
+}

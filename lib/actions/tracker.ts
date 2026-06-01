@@ -60,3 +60,39 @@ IMPORTANT RULES:
 
   return data.choices[0].message.content
 }
+
+export async function sendReminderEmail({
+  entryId,
+  company,
+  role,
+  interviewDate,
+  round,
+}: {
+  entryId: string
+  company: string
+  role: string
+  interviewDate: string
+  round: string
+}) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/send-interview-reminder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        entryId,
+        company,
+        role,
+        date: interviewDate,
+        round,
+      }),
+    })
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error sending reminder email:', error)
+    return { success: false, error }
+  }
+}

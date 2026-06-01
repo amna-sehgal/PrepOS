@@ -26,6 +26,7 @@ type Week = {
 }
 
 type RoadmapConfig = {
+  id?: string
   role: string
   companies: string[]
   weeks: number
@@ -66,6 +67,9 @@ export default function RoadmapHistory({ onSelectRoadmap }: Props) {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+      console.log("Current user:", user)
+      console.log("Roadmap data:", data)
+      console.log("Roadmap error:", error)
 
       if (!error && data) {
         setRoadmaps(data as SavedRoadmap[])
@@ -99,6 +103,7 @@ export default function RoadmapHistory({ onSelectRoadmap }: Props) {
             key={roadmap.id}
             onClick={() =>
               onSelectRoadmap({
+                id: roadmap.id,
                 role: roadmap.role,
                 companies: roadmap.companies || [],
                 weeks: roadmap.weeks,

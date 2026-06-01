@@ -31,6 +31,7 @@ type Week = {
   color: string; bg: string; border: string
 }
 type RoadmapConfig = {
+  id?: string
   role: string
   companies: string[]
   weeks: number
@@ -247,6 +248,7 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
       })
 
       onGenerate({
+        id: data.id,
         role,
         companies: selected,
         weeks,
@@ -618,28 +620,30 @@ function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () =
   const [weeks, setWeeks] = useState<Week[]>(config.roadmap || [])
 
   const toggleTopic = async (weekNum: number, topicId: string) => {
-    // 1. update UI immediately (you already had this)
-    setWeeks(prev =>
-      prev.map(w =>
-        w.week === weekNum
-          ? {
-            ...w,
-            topics: w.topics.map(t =>
-              t.id === topicId ? { ...t, done: !t.done } : t
-            )
-          }
-          : w
-      )
+    const updatedWeeks = weeks.map(w =>
+      w.week === weekNum
+        ? {
+          ...w,
+          topics: w.topics.map(t =>
+            t.id === topicId
+              ? { ...t, done: !t.done }
+              : t
+          )
+        }
+        : w
     )
-
-    // 2. save to database (NEW PART)
-    await fetch("/api/roadmap/toggle", {
-      method: "POST",
-      body: JSON.stringify({
-        week: weekNum,
-        topicId,
-      }),
-    })
+    
+    setWeeks(updatedWeeks)
+    
+    // Persist to database
+    if (config.id) {
+      try {
+        const { updateRoadmapProgress } = await import('@/lib/actions/roadmap')
+        await updateRoadmapProgress(config.id, updatedWeeks)
+      } catch (error) {
+        console.error('Failed to save progress:', error)
+      }
+    }
   }
 
   const totalTopics = weeks.reduce((a, w) => a + w.topics.length, 0)

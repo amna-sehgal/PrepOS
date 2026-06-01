@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
+import { logout } from '@/lib/actions/auth'
 import {
   LayoutDashboard, Mic2, KanbanSquare, Lightbulb,
   Map, BookOpen, Settings, LogOut, Bell, ChevronDown, Menu, X,
@@ -29,6 +30,7 @@ export default function TopNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userName, setUserName] = useState('')
   const [collegeName, setCollegeName] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -65,15 +67,33 @@ export default function TopNavbar() {
 
     fetchNotifications()
   }, [])
+
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut()
+    try {
+      setLoggingOut(true)
+      console.log('Starting logout...')
 
-    if (error) {
-      console.log('logout error:', error.message)
-      return
+      const result = await logout()
+
+      if (!result.success) {
+        console.error('Logout error:', result.error)
+        alert(`Logout failed: ${result.error}`)
+        setLoggingOut(false)
+        return
+      }
+
+      console.log('Logout successful, redirecting...')
+      setUserMenuOpen(false)
+      
+      // Redirect to login
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 100)
+    } catch (err) {
+      console.error('Unexpected logout error:', err)
+      alert('An unexpected error occurred during logout')
+      setLoggingOut(false)
     }
-
-    router.replace('/auth/login')
   }
   return (
     <>
@@ -261,16 +281,14 @@ export default function TopNavbar() {
 
                     <div style={{ borderTop: '1px solid var(--void-12)' }}>
                       <button
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 transition-colors hover:bg-ghost cursor-pointer"
-                        style={{ color: 'var(--coral)' }}
-                        onClick={async () => {
-                          setUserMenuOpen(false)
-                          await handleLogout()
-                        }}
+                        disabled={loggingOut}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 transition-colors hover:bg-ghost cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ color: loggingOut ? 'rgba(226,75,74,0.5)' : 'var(--coral)' }}
+                        onClick={handleLogout}
                       >
                         <LogOut size={14} strokeWidth={1.8} />
                         <span className="text-[13px] font-semibold" style={{ fontFamily: 'var(--font-archivo)' }}>
-                          Log out
+                          {loggingOut ? 'Logging out...' : 'Log out'}
                         </span>
                       </button>
                     </div>

@@ -51,11 +51,23 @@ export const sendInterviewReminder = inngest.createFunction(
 
       // Send reminders for each interview
       for (const entry of entries) {
-        // Get user info
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        // Use user_id from the entry
+        const userId = entry.user_id;
+        
+        if (!userId) {
+          console.error("No user_id for entry:", entry.id);
+          continue;
+        }
 
-        if (userError || !user) {
-          console.error("Error fetching user:", userError);
+        // Get user email from auth.users table
+        const { data: userData, error: userError } = await supabase
+          .from("auth.users")
+          .select("email")
+          .eq("id", userId)
+          .single();
+
+        if (userError || !userData?.email) {
+          console.error("Error fetching user email:", userError);
           continue;
         }
 
@@ -64,7 +76,7 @@ export const sendInterviewReminder = inngest.createFunction(
           .from("reminder_logs")
           .select("id")
           .eq("entry_id", entry.id)
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .gte("created_at", today.toISOString())
           .single();
 
@@ -76,7 +88,7 @@ export const sendInterviewReminder = inngest.createFunction(
         // Send email
         const emailResponse = await resend.emails.send({
           from: "onboarding@resend.dev",
-          to: user.email || "user@example.com",
+          to: userData.email,
           subject: `Interview Reminder - ${entry.company} · ${entry.role}`,
           html: `
             <!DOCTYPE html>
@@ -150,9 +162,9 @@ export const sendInterviewReminder = inngest.createFunction(
 
         // Log the reminder
         await supabase.from("reminder_logs").insert({
-          user_id: user.id,
+          user_id: userId,
           entry_id: entry.id,
-          email_sent_to: user.email,
+          email_sent_to: userData.email,
           created_at: new Date().toISOString(),
         });
 

@@ -1,5 +1,5 @@
 import { inngest } from "@/lib/inngest/inngest";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { resend } from "@/lib/resend";
 
 export const helloWorld = inngest.createFunction(
@@ -59,8 +59,9 @@ export const sendInterviewReminder = inngest.createFunction(
           continue;
         }
 
-        // Get user email from auth.users table
-        const { data: userData, error: userError } = await supabase
+        // Get user email from auth.users table using admin client
+        const adminClient = createAdminClient();
+        const { data: userData, error: userError } = await adminClient
           .from("auth.users")
           .select("email")
           .eq("id", userId)

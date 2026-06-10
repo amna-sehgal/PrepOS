@@ -55,6 +55,23 @@ const quickActions = [
   { label: 'Resources', icon: BookOpen, href: '/resources' },
 ]
 
+// Helper functions to calculate scores
+function getLatestScoreForType(interviews: any[], type: string): number {
+  if (!interviews.length) return 0
+  const filtered = interviews.filter((i: any) => i.type === type)
+  if (!filtered.length) return 0
+  // Get the latest (most recent) score
+  return filtered[filtered.length - 1].score || 0
+}
+
+function getAverageScoreForType(interviews: any[], type: string): number {
+  if (!interviews.length) return 0
+  const filtered = interviews.filter((i: any) => i.type === type)
+  if (!filtered.length) return 0
+  const sum = filtered.reduce((acc: number, i: any) => acc + (i.score || 0), 0)
+  return Math.round(sum / filtered.length)
+}
+
 const subScores = [
   { label: 'DSA', val: 68, icon: Activity },
   { label: 'System Design', val: 55, icon: BrainCircuit },
@@ -212,6 +229,9 @@ export default function DashboardPage() {
   const [recentScores, setRecentScores] = useState<any[]>([])
   const [brainstormCards, setBrainstormCards] = useState<any[]>([])
   const [aiActions, setAiActions] = useState<any[]>([])
+  const [dsaScore, setDsaScore] = useState(0)
+  const [systemDesignScore, setSystemDesignScore] = useState(0)
+  const [behavioralScore, setBehavioralScore] = useState(0)
   const stats = [
     { label: 'Mock Interviews', value: mockCount, suffix: '', sub: '+3 this week', color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
     {
@@ -403,12 +423,19 @@ export default function DashboardPage() {
     // Step 3: sort descending (latest first)
     uniqueDays.sort((a, b) => b - a)
 
-    // Step 4: calculate streak
+    // Step 4: calculate streak - allow starting from today or yesterday
     let streakCount = 0
     const today = new Date().setHours(0, 0, 0, 0)
+    const yesterday = today - 24 * 60 * 60 * 1000
 
-    for (let i = 0; i < uniqueDays.length; i++) {
-      const expectedDay = today - i * 24 * 60 * 60 * 1000
+    // Start from today if available, otherwise start from yesterday
+    let startOffset = 0
+    if (uniqueDays[0] !== today && uniqueDays[0] === yesterday) {
+      startOffset = 1 // Start from yesterday instead of today
+    }
+
+    for (let i = startOffset; i < uniqueDays.length; i++) {
+      const expectedDay = today - (i - startOffset) * 24 * 60 * 60 * 1000
 
       if (uniqueDays[i] === expectedDay) {
         streakCount++
@@ -419,6 +446,30 @@ export default function DashboardPage() {
 
     setStreak(streakCount)
   }, [completedInterviews])
+
+  // Calculate scores for each interview type
+  useEffect(() => {
+    if (!completedInterviews.length) {
+      setDsaScore(0)
+      setSystemDesignScore(0)
+      setBehavioralScore(0)
+      return
+    }
+
+    // Get latest scores for each type
+    const dsa = getLatestScoreForType(completedInterviews, 'DSA')
+    const sd = getLatestScoreForType(completedInterviews, 'System Design')
+    // Handle both "Behavioural" and "HR / Behavioural"
+    const behavioral = Math.max(
+      getLatestScoreForType(completedInterviews, 'Behavioural'),
+      getLatestScoreForType(completedInterviews, 'HR / Behavioural')
+    ) || 0
+
+    setDsaScore(dsa)
+    setSystemDesignScore(sd)
+    setBehavioralScore(behavioral)
+  }, [completedInterviews])
+
   useEffect(() => {
     const fetchRoadmap = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -1072,7 +1123,11 @@ export default function DashboardPage() {
                 </div>
 
 
-                {subScores.map((s, i) => {
+                {[
+                  { label: 'DSA', val: dsaScore, icon: Activity },
+                  { label: 'System Design', val: systemDesignScore, icon: BrainCircuit },
+                  { label: 'Behavioural', val: behavioralScore, icon: Trophy },
+                ].map((s, i) => {
                   const Icon = s.icon
                   return (
                     <div key={i} className="flex items-center justify-between mb-2.5">

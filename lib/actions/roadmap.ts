@@ -73,6 +73,11 @@ export async function generateAIRoadmap(input: GenerateRoadmapInput) {
     throw new Error('AI returned invalid roadmap JSON')
   }
 
+  await supabase
+    .from('prep_roadmaps')
+    .update({ is_active: false })
+    .eq('user_id', user.id)
+
   const { data, error } = await supabase
     .from('prep_roadmaps')
     .insert({
@@ -81,6 +86,7 @@ export async function generateAIRoadmap(input: GenerateRoadmapInput) {
       companies: input.companies,
       weeks: input.weeks,
       roadmap: parsed.weeks,
+      is_active: true,
     })
     .select()
     .single()

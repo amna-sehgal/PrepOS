@@ -479,13 +479,13 @@ export default function DashboardPage() {
         .from('prep_roadmaps')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .eq('is_active', true)
+        .single()
 
       console.log("ROADMAP:", data, error)
 
-      if (data && data.length > 0) {
-        const roadmapData = data[0]
+      if (data) {
+        const roadmapData = data
 
         // Calculate progress from weeks array
         if (roadmapData.roadmap && Array.isArray(roadmapData.roadmap)) {

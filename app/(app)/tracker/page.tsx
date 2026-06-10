@@ -168,17 +168,21 @@ function EntryModal({ entry, onSave, onClose }: { entry: Entry; onSave: (e: Entr
                 onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
                 onBlur={e => (e.target.style.borderColor = 'var(--void-12)')} />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase"
-                style={{ color: 'rgba(26,16,53,0.4)', fontFamily: 'var(--font-archivo)' }}>
-                <CalendarClock size={11} strokeWidth={1.8} /> Interview Date
-              </label>
-              <input type="date" value={form.interviewDate} onChange={e => set('interviewDate', e.target.value)}
-                className="rounded-xl px-3 py-2.5 text-[13px] outline-none transition-all"
-                style={{ background: 'var(--ghost)', border: '1.5px solid var(--void-12)', color: 'var(--void)' }}
-                onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
-                onBlur={e => (e.target.style.borderColor = 'var(--void-12)')} />
-            </div>
+            {form.status === 'Interview' && (
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold tracking-widest uppercase">
+                  <CalendarClock size={11} strokeWidth={1.8} /> Interview Date
+                </label>
+
+                <input
+                  type="date"
+                  value={form.interviewDate}
+                  onChange={e => set('interviewDate', e.target.value)}
+                  className="rounded-xl px-3 py-2.5 text-[13px] outline-none transition-all"
+                  style={{ background: 'var(--ghost)', border: '1.5px solid var(--void-12)', color: 'var(--void)' }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -649,7 +653,9 @@ export default function TrackerPage() {
     } = await supabase.auth.getUser()
 
     if (!user) return
-
+    if (e.status !== 'Interview') {
+      e.interviewDate = ''
+    }
     const payload = {
       user_id: user.id,
       company: e.company,

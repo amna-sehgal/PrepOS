@@ -18,7 +18,7 @@ export const sendInterviewReminder = inngest.createFunction(
     triggers: [
       { event: "interview/reminder-needed" },
       // Run every hour to check for interviews
-      { cron: "0 * * * *" }
+      { cron: "* * * * *"}
     ]
   },
   async ({ event }) => {

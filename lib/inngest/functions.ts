@@ -13,7 +13,7 @@ export const helloWorld = inngest.createFunction(
 );
 
 export const sendInterviewReminder = inngest.createFunction(
-  { 
+  {
     id: "send-interview-reminder",
     triggers: [
       { event: "interview/reminder-needed" },
@@ -37,6 +37,11 @@ export const sendInterviewReminder = inngest.createFunction(
         .gte("interview_date", today.toISOString().split("T")[0])
         .lte("interview_date", tomorrow.toISOString().split("T")[0]);
 
+      console.log("TODAY =", today.toISOString().split("T")[0]);
+      console.log("TOMORROW =", tomorrow.toISOString().split("T")[0]);
+      console.log("ENTRIES =", entries);
+      console.log("COUNT =", entries?.length);
+
       if (entriesError) {
         console.error("Error fetching tracker entries:", entriesError);
         return { success: false, error: entriesError };
@@ -53,7 +58,7 @@ export const sendInterviewReminder = inngest.createFunction(
       for (const entry of entries) {
         // Use user_id from the entry
         const userId = entry.user_id;
-        
+
         if (!userId) {
           console.error("No user_id for entry:", entry.id);
           continue;

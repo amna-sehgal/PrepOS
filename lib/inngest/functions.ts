@@ -23,7 +23,7 @@ export const sendInterviewReminder = inngest.createFunction(
   },
   async ({ event }) => {
     try {
-      const supabase = await createClient();
+      const supabase = createAdminClient();
 
       // Get all tracker entries with interviews in the next 24 hours
       const tomorrow = new Date();

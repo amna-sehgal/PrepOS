@@ -18,7 +18,7 @@ export const sendInterviewReminder = inngest.createFunction(
     triggers: [
       { event: "interview/reminder-needed" },
       // Run every hour to check for interviews
-      { cron: "* * * * *"}
+      { cron: "* * * * *" }
     ]
   },
   async ({ event }) => {
@@ -66,16 +66,17 @@ export const sendInterviewReminder = inngest.createFunction(
 
         // Get user email from auth.users table using admin client
         const adminClient = createAdminClient();
-        const { data: userData, error: userError } = await adminClient
-          .from("auth.users")
-          .select("email")
-          .eq("id", userId)
-          .single();
 
-        if (userError || !userData?.email) {
+        const { data: userData, error: userError } =
+          await adminClient.auth.admin.getUserById(userId);
+
+        if (userError || !userData?.user?.email) {
           console.error("Error fetching user email:", userError);
           continue;
         }
+
+        const userEmail = userData.user.email;
+        console.log("Sending email to:", userEmail);
 
         // Check if reminder was already sent today
         const { data: reminderRecord } = await supabase
@@ -94,7 +95,7 @@ export const sendInterviewReminder = inngest.createFunction(
         // Send email
         const emailResponse = await resend.emails.send({
           from: "onboarding@resend.dev",
-          to: userData.email,
+          to: userEmail,
           subject: `Interview Reminder - ${entry.company} · ${entry.role}`,
           html: `
             <!DOCTYPE html>
@@ -170,7 +171,7 @@ export const sendInterviewReminder = inngest.createFunction(
         await supabase.from("reminder_logs").insert({
           user_id: userId,
           entry_id: entry.id,
-          email_sent_to: userData.email,
+          email_sent_to: userEmail,
           created_at: new Date().toISOString(),
         });
 

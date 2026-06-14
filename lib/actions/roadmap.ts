@@ -87,6 +87,7 @@ export async function generateAIRoadmap(input: GenerateRoadmapInput) {
       weeks: input.weeks,
       roadmap: parsed.weeks,
       is_active: true,
+      last_updated_at: new Date().toISOString(),
     })
     .select()
     .single()

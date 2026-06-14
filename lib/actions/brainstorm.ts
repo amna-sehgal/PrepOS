@@ -182,7 +182,7 @@ Requirements:
 
   const { data, error } = await supabase
     .from('brainstorm_cards')
-    .update({ expanded })
+    .update({ expanded, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()

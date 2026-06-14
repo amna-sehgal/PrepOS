@@ -47,6 +47,31 @@ export default function TopNavbar() {
 
     getUser()
   }, [])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+        },
+        (payload) => {
+          setNotifications(prev => {
+            const exists = prev.some(n => n.id === payload.new.id)
+            if (exists) return prev
+            return [payload.new, ...prev]
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
   useEffect(() => {
     const fetchNotifications = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -202,28 +227,49 @@ export default function TopNavbar() {
                         {unreadCount} new
                       </span>
                     </div>
-                    {notifications.map((n, i) => (
-                      <div key={n.id}
-                        className="px-4 py-3 flex items-start gap-3 transition-colors hover:bg-ghost cursor-pointer"
-                        style={{ borderBottom: i < notifications.length - 1 ? '1px solid var(--void-12)' : 'none' }}
-                      >
-                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-                          style={{
-                            background: n.type === 'urgent' ? 'var(--coral)'
-                              : n.type === 'success' ? 'var(--teal)' : 'var(--brand)',
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className="text-[12px] leading-snug"
-                            style={{ color: 'var(--void)' }}
-                          >
-                            {n.message}
-                          </p>
-                          <p className="text-[10px] mt-0.5 font-mono-frag" style={{ color: 'rgba(26,16,53,0.35)' }}>{new Date(n.created_at).toLocaleString()}</p>
-                        </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'rgba(26,16,53,0.4)' }}>
+                        No notifications yet
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((n, i) => (
+                        <div
+                          key={n.id}
+                          className="px-4 py-3 flex items-start gap-3 transition-colors hover:bg-ghost cursor-pointer"
+                          style={{
+                            borderBottom:
+                              i < notifications.length - 1 ? '1px solid var(--void-12)' : 'none',
+                          }}
+                        >
+                          <div
+                            className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                            style={{
+                              background:
+                                n.type === 'interview-good-luck'
+                                  ? '#F59E0B'
+                                  : n.type === 'brainstorm-stale'
+                                    ? '#8B5CF6'
+                                    : n.type === 'roadmap-stale'
+                                      ? '#3B82F6'
+                                      : 'var(--brand)',
+                            }}
+                          />
+
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] leading-snug" style={{ color: 'var(--void)' }}>
+                              {n.text}
+                            </p>
+
+                            <p
+                              className="text-[10px] mt-0.5 font-mono-frag"
+                              style={{ color: 'rgba(26,16,53,0.35)' }}
+                            >
+                              {new Date(n.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

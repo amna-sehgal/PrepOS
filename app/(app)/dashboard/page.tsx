@@ -305,7 +305,8 @@ export default function DashboardPage() {
   }, [])
   useEffect(() => {
     const fetchInterviews = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+const user = session?.user
       if (!user) return
 
       const { data, error } = await supabase
@@ -472,7 +473,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchRoadmap = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+const user = session?.user
       if (!user) return
 
       const { data, error } = await supabase

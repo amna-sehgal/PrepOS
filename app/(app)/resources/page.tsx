@@ -16,7 +16,13 @@ const fadeUp = {
 }
 
 // ── Types ──────────────────────────────────────────────
-type Category = 'DSA' | 'System Design' | 'Behavioural' | 'Company' | 'Courses' | 'Books'
+type Category =
+  | 'DSA'
+  | 'System Design'
+  | 'Behavioural'
+  | 'AI/ML'
+  | 'Courses'
+  | 'Books'
 type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
 type Resource = {
   id: string; title: string; description: string
@@ -31,7 +37,7 @@ const catConfig: Record<Category, {
   DSA:           { label: 'DSA',            color: 'var(--brand)',  bg: 'rgba(83,74,183,0.08)',  border: 'rgba(83,74,183,0.2)',  icon: BrainCircuit },
   'System Design': { label: 'System Design', color: '#8B5CF6',      bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)', icon: Layers },
   Behavioural:   { label: 'Behavioural',    color: 'var(--teal)',   bg: 'rgba(29,158,117,0.08)', border: 'rgba(29,158,117,0.2)', icon: MessageSquare },
-  Company:       { label: 'Company Prep',   color: 'var(--coral)',  bg: 'rgba(226,75,74,0.08)',  border: 'rgba(226,75,74,0.2)',  icon: Building2 },
+  'AI/ML':         { label: 'AI/ML',          color: 'var(--purple)', bg: 'rgba(147,51,234,0.08)', border: 'rgba(147,51,234,0.2)', icon: BrainCircuit },
   Courses:       { label: 'Courses',        color: 'var(--amber)',  bg: 'rgba(239,159,39,0.08)', border: 'rgba(239,159,39,0.2)', icon: Youtube },
   Books:         { label: 'Books & Blogs',  color: '#06B6D4',       bg: 'rgba(6,182,212,0.08)',  border: 'rgba(6,182,212,0.2)',  icon: BookMarked },
 }
@@ -44,45 +50,106 @@ const difficultyConfig: Record<Difficulty, { color: string; bg: string }> = {
 }
 
 // ── Resource data ──────────────────────────────────────
+// ── Resource data ──────────────────────────────────────
 const resources: Resource[] = [
   // DSA
-  { id: '1', title: 'Striver\'s A2Z DSA Sheet', description: 'The most complete DSA roadmap for Indian college students. 450+ problems organised by topic with video solutions.', category: 'DSA', difficulty: 'All Levels', url: 'https://takeuforward.org/strivers-a2z-dsa-course', tags: ['Most Popular', 'Free', 'Videos'], featured: true, free: true },
+  { id: '1', title: 'Striver\'s A2Z DSA Sheet', description: 'The most complete DSA roadmap for Indian college students. 450+ problems organised by topic with video solutions.', category: 'DSA', difficulty: 'All Levels', url: 'https://takeuforward.org/dsa/strivers-a2z-sheet-learn-dsa-a-to-z', tags: ['Most Popular', 'Free', 'Videos'], featured: true, free: true },
   { id: '2', title: 'NeetCode 150', description: 'The 150 most important LeetCode problems curated for FAANG interviews. Clean explanations and Python solutions.', category: 'DSA', difficulty: 'Intermediate', url: 'https://neetcode.io', tags: ['FAANG Focus', 'Free', 'Python'], featured: true, free: true },
-  { id: '3', title: 'Love Babbar\'s DSA Sheet', description: '450 handpicked DSA problems with a topic-wise breakdown. Widely used across tier 2 & 3 college students.', category: 'DSA', difficulty: 'Beginner', url: 'https://450dsa.com', tags: ['450 Problems', 'Free', 'Tier 2 Friendly'], featured: false, free: true },
-  { id: '4', title: 'LeetCode', description: 'The gold standard for interview prep. 3000+ problems, company-tagged questions, and weekly contests.', category: 'DSA', difficulty: 'All Levels', url: 'https://leetcode.com', tags: ['Industry Standard', 'Contests'], featured: false, free: false },
+  { id: '3', title: 'Love Babbar\'s DSA Sheet', description: '450 handpicked DSA problems with a topic-wise breakdown. Widely used across tier 2 & 3 college students.', category: 'DSA', difficulty: 'Beginner', url: 'https://www.geeksforgeeks.org/love-babbar-dsa-sheet-450-problems/', tags: ['450 Problems', 'Free', 'Tier 2 Friendly'], featured: false, free: true },
+  { id: '4', title: 'LeetCode', description: 'The gold standard for interview prep. 3000+ problems, company-tagged questions, and weekly contests.', category: 'DSA', difficulty: 'All Levels', url: 'https://leetcode.com/problemset/', tags: ['Industry Standard', 'Contests'], featured: false, free: false },
   { id: '5', title: 'Codeforces', description: 'Best platform for competitive programming. Regular rounds help you build speed and pattern recognition.', category: 'DSA', difficulty: 'Advanced', url: 'https://codeforces.com', tags: ['Competitive', 'Rated Contests', 'CP'], featured: false, free: true },
 
   // System Design
   { id: '6', title: 'System Design Primer', description: 'The most starred GitHub repo for system design. Covers scalability, databases, caching, load balancing and more.', category: 'System Design', difficulty: 'Intermediate', url: 'https://github.com/donnemartin/system-design-primer', tags: ['GitHub', 'Free', 'Comprehensive'], featured: true, free: true },
   { id: '7', title: 'ByteByteGo Newsletter', description: 'Alex Xu\'s weekly system design newsletter. Real-world architecture breakdowns of systems like YouTube, WhatsApp, and more.', category: 'System Design', difficulty: 'Intermediate', url: 'https://bytebytego.com', tags: ['Newsletter', 'Real-world', 'Visual'], featured: true, free: false },
-  { id: '8', title: 'Designing Data-Intensive Applications', description: 'The bible of distributed systems. Deep dives into databases, replication, partitioning, and consistency.', category: 'System Design', difficulty: 'Advanced', url: '#', tags: ['Book', 'Deep Dive', 'Must Read'], featured: false, free: false },
+  {
+    id: '8',
+    title: 'Designing Data-Intensive Applications (Free Notes)',
+    description: 'High-quality free breakdowns and summaries of DDIA concepts like scaling, replication, and consistency.',
+    category: 'System Design',
+    difficulty: 'Advanced',
+    url: 'https://dataintensive.net/',
+    tags: ['Book Concepts', 'Free Notes', 'Deep Dive'],
+    featured: false,
+    free: true
+  },
   { id: '9', title: 'High Scalability Blog', description: 'Real architecture teardowns of companies like Instagram, Twitter, and Netflix. Excellent for senior roles.', category: 'System Design', difficulty: 'Advanced', url: 'http://highscalability.com', tags: ['Case Studies', 'Free', 'Blog'], featured: false, free: true },
 
   // Behavioural
-  { id: '10', title: 'STAR Method Guide', description: 'Master the Situation-Task-Action-Result framework for behavioural interviews. Includes 50+ question bank with sample answers.', category: 'Behavioural', difficulty: 'Beginner', url: '#', tags: ['Free', 'Framework', 'Starter'], featured: true, free: true },
+  {
+    id: '10',
+    title: 'STAR Method Guide (GeeksforGeeks)',
+    description: 'Learn the STAR interview framework with examples and structured behavioural answers.',
+    category: 'Behavioural',
+    difficulty: 'Beginner',
+    url: 'https://www.geeksforgeeks.org/star-interview-method/',
+    tags: ['Free', 'Framework', 'Starter'],
+    featured: true,
+    free: true
+  },
   { id: '11', title: 'Amazon Leadership Principles', description: 'Deep dive into Amazon\'s 16 leadership principles with example stories and what interviewers look for.', category: 'Behavioural', difficulty: 'All Levels', url: 'https://www.amazon.jobs/content/en/our-workplace/leadership-principles', tags: ['Amazon', 'Free', 'LP Questions'], featured: false, free: true },
-  { id: '12', title: 'Life Stories Method', description: 'Think in terms of life stories, not STAR bullets. This framework helps you stand out in PM and senior eng roles.', category: 'Behavioural', difficulty: 'Intermediate', url: '#', tags: ['PM Friendly', 'Free', 'Storytelling'], featured: false, free: true },
 
-  // Company
-  { id: '13', title: 'Glassdoor Interview Experiences', description: 'Real interview questions and experiences from people who\'ve interviewed at your target companies.', category: 'Company', difficulty: 'All Levels', url: 'https://glassdoor.com', tags: ['Real Experiences', 'Free', 'All Companies'], featured: true, free: true },
-  { id: '14', title: 'LeetCode Company Tags', description: 'Filter LeetCode problems by company. Focus on the last 6 months of questions for your target company.', category: 'Company', difficulty: 'All Levels', url: 'https://leetcode.com/company', tags: ['Premium', 'Company Tagged', 'Focused'], featured: false, free: false },
-  { id: '15', title: 'Exponent PM Interview Prep', description: 'Product Manager interview prep with real mock interviews, frameworks, and company-specific guides for Flipkart, Google, and more.', category: 'Company', difficulty: 'Intermediate', url: 'https://www.tryexponent.com', tags: ['PM Focus', 'Mock Interviews'], featured: false, free: false },
-  { id: '16', title: 'Razorpay Interview Guide', description: 'Aggregated interview experiences and common patterns from Razorpay SDE interviews. DSA-heavy with some OS and networking.', category: 'Company', difficulty: 'Intermediate', url: '#', tags: ['Razorpay', 'Free', 'Indian Startup'], featured: false, free: true },
+  {
+    id: '12',
+    title: 'Behavioural Interview Storytelling Guide',
+    description: 'How to structure real-life stories for interviews to stand out beyond STAR format.',
+    category: 'Behavioural',
+    difficulty: 'Intermediate',
+    url: 'https://www.themuse.com/advice/star-interview-method',
+    tags: ['Storytelling', 'Free', 'PM Friendly'],
+    featured: false,
+    free: true
+  },
+
+  // AI/ML
+  {
+    id: '13',
+    title: 'AI/ML Learning Roadmap (Fast.ai + Deeplearning.ai)',
+    description: 'Structured path to learn AI/ML with practical courses, projects, and foundational concepts.',
+    category: 'AI/ML',
+    difficulty: 'All Levels',
+    url: 'https://course.fast.ai/',
+    tags: ['Free', 'Practical', 'Projects'],
+    featured: true,
+    free: true
+  },
 
   // Courses
   { id: '17', title: 'Striver\'s DSA Playlist (YouTube)', description: '200+ hours of free DSA content by Raj Vikramaditya. The most comprehensive free resource for Indian students.', category: 'Courses', difficulty: 'All Levels', url: 'https://youtube.com/@takeUforward', tags: ['YouTube', 'Free', '200+ Hours'], featured: true, free: true },
   { id: '18', title: 'NeetCode YouTube', description: 'Clean, fast DSA explanations with visual animations. Best for understanding patterns quickly before an interview.', category: 'Courses', difficulty: 'Intermediate', url: 'https://youtube.com/@NeetCode', tags: ['YouTube', 'Free', 'Visual'], featured: true, free: true },
   { id: '19', title: 'Gaurav Sen System Design', description: 'System design explained simply. HLD and LLD videos are the go-to for Indian interviews at product companies.', category: 'Courses', difficulty: 'Intermediate', url: 'https://youtube.com/@gkcs', tags: ['YouTube', 'Free', 'HLD & LLD'], featured: false, free: true },
-  { id: '20', title: 'CS50 by Harvard', description: 'The best intro to CS fundamentals. Free on edX — covers C, Python, data structures, algorithms, web, and AI.', category: 'Courses', difficulty: 'Beginner', url: 'https://cs50.harvard.edu', tags: ['edX', 'Free', 'Fundamentals'], featured: false, free: true },
+  { id: '20', title: 'CS50 by Harvard', description: 'The best intro to CS fundamentals. Free on edX — covers C, Python, data structures, algorithms, web, and AI.', category: 'Courses', difficulty: 'Beginner', url: 'https://cs50.harvard.edu/x', tags: ['edX', 'Free', 'Fundamentals'], featured: false, free: true },
 
   // Books
-  { id: '21', title: 'Cracking the Coding Interview', description: 'The classic interview prep book. 189 programming questions and solutions across all major CS topics.', category: 'Books', difficulty: 'Intermediate', url: '#', tags: ['Book', 'Classic', 'Must Have'], featured: true, free: false },
-  { id: '22', title: 'System Design Interview (Alex Xu)', description: 'Vol 1 & 2 cover 16 real system design problems with detailed solutions. Best book for system design rounds.', category: 'Books', difficulty: 'Intermediate', url: '#', tags: ['Book', 'Top Rated', 'Vol 1 & 2'], featured: true, free: false },
+  {
+    id: '21',
+    title: 'Cracking the Coding Interview (Practice Hub)',
+    description: 'Free curated interview problems and solutions inspired by CTCI concepts.',
+    category: 'Books',
+    difficulty: 'Intermediate',
+    url: 'https://techinterviewhandbook.org/',
+    tags: ['Free Alternative', 'Interview Prep', 'Practice'],
+    featured: true,
+    free: true
+  },
+
+  {
+    id: '22',
+    title: 'System Design Interview (Free System Design Hub)',
+    description: 'Free system design case studies inspired by Alex Xu style interview questions.',
+    category: 'Books',
+    difficulty: 'Intermediate',
+    url: 'https://github.com/ByteByteGoHq/system-design-101',
+    tags: ['Free', 'System Design', 'Case Studies'],
+    featured: true,
+    free: true
+  },
+
   { id: '23', title: 'GeeksforGeeks', description: 'The Wikipedia of CS interview prep. Articles on every DSA topic, OS, DBMS, and networking concept.', category: 'Books', difficulty: 'All Levels', url: 'https://geeksforgeeks.org', tags: ['Website', 'Free', 'Reference'], featured: false, free: true },
   { id: '24', title: 'roadmap.sh', description: 'Visual, interactive career roadmaps for frontend, backend, DevOps, and more. Great for structured learning.', category: 'Books', difficulty: 'All Levels', url: 'https://roadmap.sh', tags: ['Website', 'Free', 'Visual Roadmaps'], featured: false, free: true },
 ]
 
-const CATEGORIES: Category[] = ['DSA', 'System Design', 'Behavioural', 'Company', 'Courses', 'Books']
+const CATEGORIES: Category[] = ['DSA', 'System Design', 'Behavioural', 'AI/ML', 'Courses', 'Books']
 
 // ── Resource card ──────────────────────────────────────
 function ResourceCard({ resource, index }: { resource: Resource; index: number }) {

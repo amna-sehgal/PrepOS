@@ -36,18 +36,18 @@ export default function TopNavbar() {
 
   const unreadCount = notifications.filter(n => !n.is_read).length
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+    const loadUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
 
+      const user = session?.user
       if (user) {
         setUserName(user.user_metadata.full_name || '')
         setCollegeName(user.user_metadata.college_name || '')
       }
     }
 
-    getUser()
+    loadUser()
   }, [])
-
   useEffect(() => {
     const channel = supabase
       .channel('notifications')
@@ -74,7 +74,8 @@ export default function TopNavbar() {
   }, [])
   useEffect(() => {
     const fetchNotifications = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) return
 
       const { data, error } = await supabase

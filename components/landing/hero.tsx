@@ -158,39 +158,6 @@ export default function Hero() {
           No credit card · Works for tier 1, 2 &amp; 3 colleges
         </motion.p>
 
-        {/* Social proof strip */}
-        <motion.div
-          variants={item}
-          className="flex items-center gap-3 mt-8 flex-wrap justify-center"
-        >
-          <div className="flex -space-x-2">
-            {['P', 'A', 'R', 'K', 'S'].map((l, i) => (
-              <div
-                key={i}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border-2"
-                style={{
-                  background: ['#534AB7', '#1D9E75', '#EF9F27', '#E24B4A', '#AFA9EC'][i],
-                  color: '#fff',
-                  borderColor: 'var(--ghost)',
-                  fontFamily: 'var(--font-archivo)',
-                }}
-              >
-                {l}
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="flex gap-0.5">
-              {[1, 2, 3, 4, 5].map(i => (
-                <span key={i} className="text-[12px]" style={{ color: '#EF9F27' }}>★</span>
-              ))}
-            </div>
-            <span className="font-familjen text-[12px]" style={{ color: 'rgba(26,16,53,0.45)' }}>
-              <span className="font-semibold" style={{ color: 'var(--void)' }}>2,400+</span> students prepping
-            </span>
-          </div>
-        </motion.div>
-
       </motion.div>
     </section>
   )

@@ -1,9 +1,9 @@
 'use client'
-
-import React, { useRef } from 'react'
 import { motion, cubicBezier, useScroll, useTransform, useInView } from 'framer-motion'
 import Link from 'next/link'
 import { Reveal, SlideIn, StaggerReveal, staggerItem, ScalePop } from '../motion'
+import Image from 'next/image'
+import { useEffect, useRef, useState } from 'react'
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 const features = [
@@ -269,224 +269,269 @@ export function IndiaSection() {
   )
 }
 
-// ─── How it works ─────────────────────────────────────────────────────────────
-
+// how it works
 const steps = [
   {
     num: '01',
     title: 'Set your target',
     desc: 'Choose your role, tier, and timeline. PrepOS calibrates everything to your goal.',
     tag: 'Your north star',
-    ring: 'bg-[#7F77DD]',
-    halo: 'ring-[#7F77DD]/25',
-    outerBorder: 'border-indigo-dark/40',
-    numColor: 'text-mist',
-    tagStyle: 'bg-[#7F77DD]/[0.12] text-indigo',
-    cardStyle: 'bg-white border-void/[0.08]',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="#534AB7" strokeWidth="2" />
+        <path d="M12 8v8M8 12h8" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    accentBg: 'bg-indigo/8',
   },
   {
     num: '02',
     title: 'Log your companies',
-    desc: "Add every company you're targeting. Reminders, prep plans, status — handled.",
+    desc: 'Add every company you\'re targeting. Reminders, prep plans, status — handled.',
     tag: 'AI-managed',
-    ring: 'bg-[#7F77DD]',
-    halo: 'ring-[#7F77DD]/25',
-    outerBorder: 'border-indigo-dark/40',
-    numColor: 'text-indigo-dark',
-    tagStyle: 'bg-[#7F77DD]/[0.12] text-indigo',
-    cardStyle: 'bg-white border-void/[0.08]',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="6" width="18" height="2.5" rx="1.25" fill="#7F77DD" />
+        <rect x="3" y="11" width="13" height="2.5" rx="1.25" fill="#AFA9EC" />
+        <rect x="3" y="16" width="15" height="2.5" rx="1.25" fill="#AFA9EC" />
+      </svg>
+    ),
+    accentBg: 'bg-lavender/8',
   },
   {
     num: '03',
     title: 'Practice daily',
     desc: 'Take AI mock interviews. Work through your roadmap. Watch your readiness climb.',
     tag: 'Score tracked',
-    ring: 'bg-[#7F77DD]',
-    halo: 'ring-[#7F77DD]/25',
-    outerBorder: 'border-indigo-dark/40',
-    numColor: 'text-mist',
-    tagStyle: 'bg-[#7F77DD]/[0.12] text-indigo',
-    cardStyle: 'bg-white border-void/[0.08]',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M9 17L5 13M5 13l4-4M5 13h14M19 7v10" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    accentBg: 'bg-indigo/8',
   },
   {
     num: '04',
     title: 'Walk in ready',
     desc: 'Show up with a prep plan, a score history, and zero surprises.',
     tag: 'The payoff',
-    ring: 'bg-[#7F77DD]',
-    halo: 'ring-[#7F77DD]/25',
-    outerBorder: 'border-indigo-dark/40',
-    numColor: 'text-lavender',
-    tagStyle: 'bg-[#7F77DD]/[0.12] text-indigo',
-    cardStyle: 'bg-white border-void/[0.08]',
-    isFinal: true,
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M9 12l2 2 4-4" stroke="#7F77DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="9" stroke="#7F77DD" strokeWidth="2" />
+      </svg>
+    ),
+    accentBg: 'bg-lavender/8',
   },
 ]
-
+ 
 export function HowItWorks() {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
-
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [mounted, setMounted] = useState(false)
+ 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+ 
+  useEffect(() => {
+    if (!mounted) return
+ 
+    const handleScroll = () => {
+      const stepElements = document.querySelectorAll('[data-step]')
+      let closestIndex = 0
+      let closestDistance = Infinity
+ 
+      stepElements.forEach((el, index) => {
+        const rect = el.getBoundingClientRect()
+        const elementCenter = rect.top + rect.height / 2
+        const viewportCenter = window.innerHeight / 2
+        const distance = Math.abs(elementCenter - viewportCenter)
+ 
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closestIndex = index
+        }
+      })
+ 
+      setActiveIndex(closestIndex)
+    }
+ 
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Call once on mount
+ 
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [mounted])
+ 
   return (
-    <section id="how-it-works" className="py-0 pb-20 px-6 md:px-12 max-w-5xl mx-auto">
+    <section id="how-it-works" className="py-20 px-6 md:px-12 max-w-4xl mx-auto">
       <Reveal>
-        <p className="font-mono-frag text-[11px] tracking-[0.1em] uppercase text-indigo mb-3">
+        <p className="font-mono-frag text-[11px] uppercase tracking-[0.1em] text-indigo mb-3">
           Step by step
         </p>
-        <h2 className="font-archivo font-black text-[36px] tracking-[-0.03em] text-void mb-12">
+        <h2 className="font-archivo font-black text-[36px] md:text-[42px] text-void mb-12">
           How PrepOS works
         </h2>
       </Reveal>
-
-      <div ref={ref} className="relative grid grid-cols-2 md:grid-cols-4 gap-0">
-
-        {/* Track background */}
-        <div className="absolute top-10 left-[calc(12.5%+40px)] right-[calc(12.5%+40px)] h-[2px] bg-indigo/10 rounded-full hidden md:block" />
-
-        {/* Animated track fill */}
-        <motion.div
-          className="absolute top-10 left-[calc(12.5%+40px)] h-[2px] bg-gradient-to-r from-indigo via-lavender to-indigo rounded-full hidden md:block"
-          initial={{ width: '0%' }}
-          animate={isInView ? { width: 'calc(100% - 80px)' } : {}}
-          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-        />
-
-        {steps.map((s, i) => (
-          <motion.div
-            key={s.num}
-            className="flex flex-col items-center text-center px-2.5"
-            initial={{ opacity: 0, y: 16 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ delay: i * 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {/* Outer halo ring - fully colored */}
-            <motion.div
-              className={`w-24 h-24 rounded-full border-2 ${s.outerBorder} ${s.ring} flex items-center justify-center relative z-10 shadow-lg`}
-              animate={isInView ? {
-                boxShadow: [
-                  `0 0 0 0px rgba(83,74,183,0.3)`,
-                  `0 0 0 12px rgba(83,74,183,0)`,
-                ],
-              } : {}}
-              transition={{ delay: i * 0.18 + 0.4, duration: 0.7 }}
-            >
-              <div className={`flex items-center justify-center`}>
-                {s.isFinal ? (
-                  <svg width="28" height="28" viewBox="0 0 22 22" fill="none">
-                    <path d="M5 11l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : (
-                  <span className="font-archivo font-black text-[32px] tracking-wide text-white">
-                    {s.num}
-                  </span>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Stem */}
-            <motion.div
-              className="w-[1.5px] bg-gradient-to-b from-indigo/30 to-transparent"
-              initial={{ height: 0 }}
-              animate={isInView ? { height: 28 } : {}}
-              transition={{ delay: i * 0.18 + 0.15, duration: 0.4 }}
-            />
-
-            {/* Card */}
-            <motion.div
-              className={`rounded-2xl border p-[18px] w-full cursor-default ${s.cardStyle} h-[200px] flex flex-col`}
-              whileHover={{ y: -5, transition: { duration: 0.25, ease: 'easeOut' } }}
-            >
-              <p className="font-archivo font-bold text-[13px] text-void tracking-[-0.01em] mb-2">
-                {s.title}
-              </p>
-              <p className="font-familjen text-[11.5px] text-void/50 leading-relaxed mb-auto flex-grow">
-                {s.desc}
-              </p>
-              <span className={`inline-block font-archivo text-[10px] font-bold rounded-full px-3 py-1 ${s.tagStyle}`}>
-                {s.tag}
-              </span>
-            </motion.div>
-          </motion.div>
-        ))}
+ 
+      <div ref={ref} className="relative">
+        {/* Static vertical line */}
+        <div className="absolute left-6 top-0 bottom-0 w-px bg-void/8" />
+ 
+        <div className="flex flex-col gap-8">
+          {steps.map((step, i) => {
+            const isActive = i === activeIndex
+ 
+            return (
+              <motion.div
+                key={step.num}
+                data-step
+                data-index={i}
+                className="flex gap-4 md:gap-6 items-start"
+                initial={false}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {/* Node */}
+                <motion.div
+                  className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center font-archivo font-bold text-[14px] flex-shrink-0"
+                  animate={{
+                    backgroundColor: isActive ? '#534AB7' : '#E8E6F5',
+                    color: isActive ? '#F7F6FD' : '#534AB7',
+                    boxShadow: isActive 
+                      ? '0 0 0 8px rgba(83,74,183,0.15)' 
+                      : '0 0 0 0px rgba(83,74,183,0)',
+                  }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                >
+                  {step.num}
+                </motion.div>
+ 
+                {/* Card */}
+                <motion.div
+                  className="flex-1 rounded-2xl border overflow-hidden"
+                  animate={{
+                    backgroundColor: isActive ? 'rgba(245,242,255,0.95)' : 'rgba(248,247,252,0.6)',
+                    borderColor: isActive ? 'rgba(83,74,183,0.35)' : 'rgba(0,0,0,0.08)',
+                    boxShadow: isActive 
+                      ? '0 8px 24px rgba(83,74,183,0.15)' 
+                      : '0 0px 0px rgba(83,74,183,0)',
+                    y: isActive ? -4 : 0,
+                  }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                >
+                  <div className="p-6">
+                    {/* Icon + Tag row */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                        {step.icon}
+                      </div>
+                      <motion.span
+                        className="font-archivo text-[9px] font-bold px-3 py-1.5 rounded-full uppercase tracking-[0.02em]"
+                        animate={{
+                          backgroundColor: isActive ? 'rgba(83,74,183,0.18)' : 'rgba(83,74,183,0.1)',
+                          color: isActive ? '#534AB7' : '#7F77DD',
+                        }}
+                        transition={{ duration: 0.35, ease: 'easeInOut' }}
+                      >
+                        {step.tag}
+                      </motion.span>
+                    </div>
+ 
+                    {/* Content */}
+                    <h3 className="font-archivo font-black text-[17px] text-void mb-2 tracking-[-0.01em]">
+                      {step.title}
+                    </h3>
+                    <p className="font-familjen text-[13px] text-void/65 leading-relaxed">
+                      {step.desc}
+                    </p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
 }
-
 // ─── CTA Footer ───────────────────────────────────────────────────────────────
 export function CTAFooter() {
   return (
     <>
-      <div className="bg-void py-16 px-6 text-center">
+      {/* DARK CTA SECTION */}
+      <div className="bg-[#110B27] py-20 px-6 text-center relative overflow-hidden">
+
+        {/* subtle glow background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1A1035]/40 to-transparent pointer-events-none" />
+
         <Reveal>
-          <h2 className="font-archivo font-black text-[40px] md:text-[52px] tracking-[-0.04em] text-void leading-[1.05] mb-3">
+          <h2 className="font-archivo font-black text-[40px] md:text-[52px] tracking-[-0.04em] text-[#F5F2FF] leading-[1.05] mb-3">
             Stop winging it.
             <br />
-            <span className="text-lavender">Start PrepOS today.</span>
+            <span className="text-[#AFA9EC]">Start PrepOS today.</span>
           </h2>
-          <p className="font-familjen text-[15px] text-void/70 mb-8">
+
+          {/* FIX 1: brighter paragraph */}
+          <p className="font-familjen text-[15px] text-[#F5F2FF] opacity-100 mb-10">
             Free for all college students. No credit card required.
           </p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
+
+          <div className="flex items-center justify-center">
             <Link href="/auth/signup">
               <motion.div
-                whileHover={{ scale: 1.03, y: -1 }}
-                whileTap={{ scale: 0.97, y: 0 }}
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
+
+                /* FIX 2: remove any dullness, make fully solid */
                 className="inline-flex items-center gap-2 font-archivo font-bold text-[14px] rounded-full cursor-pointer"
+
                 style={{
-                  backgroundColor: '#1A1035',
-                  color: '#F7F6FD',
-                  paddingLeft: '32px',
-                  paddingRight: '24px',
+                  backgroundColor: '#F5F2FF',
+                  color: '#110B27', // darker text = more contrast (FIX)
+                  paddingLeft: '34px',
+                  paddingRight: '26px',
                   paddingTop: '14px',
                   paddingBottom: '14px',
-                  border: '1px solid rgba(175,169,236,0.2)',
-                  transition: 'background-color 0.18s ease',
+                  opacity: 1, // ensure no inherited fade
                 }}
-                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.backgroundColor = '#26215C')}
-                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.backgroundColor = '#1A1035')}
               >
                 Create free account
+
                 <span
                   className="inline-flex items-center justify-center rounded-full text-[11px]"
-                  style={{ width: '20px', height: '20px', backgroundColor: 'rgba(175,169,236,0.2)', color: '#AFA9EC' }}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: '#AFA9EC',
+                    color: '#110B27',
+                    opacity: 1,
+                  }}
                 >
                   →
                 </span>
-              </motion.div>
-            </Link>
-            <Link href="#how-it-works">
-              <motion.div
-                whileHover="hover"
-                initial="rest"
-                className="relative inline-flex items-center font-familjen font-semibold text-[14px] text-[#9D97C2]
-                           border border-white/15 rounded-full px-8 py-3.5 no-underline overflow-hidden group cursor-pointer"
-              >
-                <motion.div
-                  className="absolute inset-0 bg-lavender/40 rounded-full"
-                  variants={{
-                    rest: { scaleX: 0 },
-                    hover: { scaleX: 1 }
-                  }}
-                  transition={{ duration: 0.6, ease: 'easeInOut' }}
-                  style={{ originX: 0 }}
-                />
-                <span className="relative group-hover:text-white transition-colors duration-500">Watch a demo</span>
               </motion.div>
             </Link>
           </div>
         </Reveal>
       </div>
 
-      {/* Footer bar */}
-      <div className="bg-[#110B27] px-8 py-4 flex items-center justify-between">
-        <span className="font-archivo font-black text-[16px] text-[#F5F2FF] tracking-[-0.02em]">
+      {/* FOOTER BAR */}
+      <div className="bg-[#0B071A] px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-2">
+
+        <span className="font-archivo font-black text-[15px] text-[#F5F2FF]">
           PrepOS
         </span>
-        <span className="font-familjen text-[12px] text-brand">
+
+        {/* FIX 3: remove muted look */}
+        <span className="font-familjen text-[12px] text-[#F5F2FF] opacity-90">
           Built for every college student in India.
         </span>
+
+        <span className="font-familjen text-[12px] text-[#AFA9EC] opacity-100">
+          Created by Amna ✨
+        </span>
+
       </div>
     </>
   )

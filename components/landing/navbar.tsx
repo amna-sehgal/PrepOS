@@ -10,14 +10,14 @@ export default function Navbar() {
   const [activeSection, setActiveSection] = useState('')
   const [ctaHovered, setCtaHovered] = useState(false)
 
-  // Pill gets slightly more opaque + stronger border on scroll
   const bgOpacity = useTransform(scrollY, [0, 80], [0.82, 0.96])
   const borderOpacity = useTransform(scrollY, [0, 80], [0.12, 0.22])
   const shadowOpacity = useTransform(scrollY, [0, 80], [0, 1])
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['features', 'about', 'pricing']
+      const sections = ['features', 'how-it-works']
+
       for (const section of sections) {
         const el = document.querySelector(`#${section}`)
         if (el) {
@@ -28,16 +28,17 @@ export default function Navbar() {
           }
         }
       }
+
       setActiveSection('')
     }
+
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const navLinks = [
     { label: 'Features', id: 'features' },
-    { label: 'About', id: 'about' },
-    { label: 'Pricing', id: 'pricing' },
+    { label: 'How it Works', id: 'how-it-works' },
   ]
 
   return (
@@ -67,7 +68,7 @@ export default function Navbar() {
           }}
         />
 
-        {/* Shadow on scroll */}
+        {/* Shadow */}
         <motion.div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
@@ -76,7 +77,7 @@ export default function Navbar() {
           }}
         />
 
-        {/* Always-visible pill border */}
+        {/* Static border */}
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{ border: '1px solid rgba(83,74,183,0.12)' }}
@@ -84,7 +85,7 @@ export default function Navbar() {
 
         <nav className="relative flex items-center justify-between h-[54px] px-5">
 
-          {/* Left: Logo */}
+          {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline flex-shrink-0">
             <Image
               src="/Screenshot 2026-03-19 215740.png"
@@ -95,16 +96,21 @@ export default function Navbar() {
             />
             <span
               className="font-archivo font-black hidden sm:inline"
-              style={{ fontSize: '16px', letterSpacing: '-0.04em', color: '#1A1035' }}
+              style={{
+                fontSize: '16px',
+                letterSpacing: '-0.04em',
+                color: '#1A1035',
+              }}
             >
               PrepOS
             </span>
           </Link>
 
-          {/* Center: Nav links — flip animation on hover */}
+          {/* Center Nav */}
           <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
             {navLinks.map(({ label, id }) => {
               const isActive = activeSection === id
+
               return (
                 <Link
                   key={id}
@@ -114,7 +120,9 @@ export default function Navbar() {
                     fontSize: '13.5px',
                     background: isActive ? '#534AB7' : 'rgba(83,74,183,0.1)',
                     color: isActive ? '#F7F6FD' : '#534AB7',
-                    border: isActive ? '1px solid #534AB7' : '1px solid rgba(83,74,183,0.18)',
+                    border: isActive
+                      ? '1px solid #534AB7'
+                      : '1px solid rgba(83,74,183,0.18)',
                     transition: 'color 0.22s ease, border-color 0.22s ease',
                   }}
                   onMouseEnter={e => {
@@ -136,7 +144,6 @@ export default function Navbar() {
                     }
                   }}
                 >
-                  {/* Flip background */}
                   <span
                     className="flip-bg absolute inset-0 rounded-full"
                     style={{
@@ -151,14 +158,21 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right: Auth */}
+          {/* Right Auth */}
           <div className="flex items-center gap-1 flex-shrink-0">
+
             <Link
               href="/auth/login"
               className="hidden sm:block font-familjen no-underline px-3 py-1.5 rounded-full transition-colors duration-150"
-              style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(26,16,53,0.4)' }}
+              style={{
+                fontSize: '13px',
+                fontWeight: 500,
+                color: 'rgba(26,16,53,0.4)',
+              }}
               onMouseEnter={e => (e.currentTarget.style.color = '#1A1035')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(26,16,53,0.4)')}
+              onMouseLeave={e =>
+                (e.currentTarget.style.color = 'rgba(26,16,53,0.4)')
+              }
             >
               Log in
             </Link>
@@ -176,10 +190,7 @@ export default function Navbar() {
                   letterSpacing: '-0.01em',
                   backgroundColor: ctaHovered ? '#26215C' : '#1A1035',
                   color: '#F7F6FD',
-                  paddingLeft: '16px',
-                  paddingRight: '10px',
-                  paddingTop: '9px',
-                  paddingBottom: '9px',
+                  padding: '9px 10px 9px 16px',
                   transition: 'background-color 0.18s ease',
                 }}
                 onMouseEnter={() => setCtaHovered(true)}
@@ -200,8 +211,8 @@ export default function Navbar() {
                 </span>
               </Link>
             </motion.div>
-          </div>
 
+          </div>
         </nav>
       </motion.header>
     </div>

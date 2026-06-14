@@ -23,21 +23,19 @@ export const sendInterviewReminder = inngest.createFunction(
   async ({ event }) => {
     try {
       const supabase = createAdminClient();
-
-      // Get all tracker entries with interviews in the next 24 hours
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
       const today = new Date();
 
-      const { data: entries, error: entriesError } = await supabase
-        .from("tracker_entries")
-        .select("*")
-        .eq("status", "Interview")
-        .gte("interview_date", today.toISOString().split("T")[0])
-        .lte("interview_date", tomorrow.toISOString().split("T")[0]);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      console.log("TODAY =", today.toISOString().split("T")[0]);
-      console.log("TOMORROW =", tomorrow.toISOString().split("T")[0]);
+      const { data: entries, error: entriesError } = await supabase
+        .from("prep_roadmaps")
+        .select("*")
+        .eq("is_active", true)
+        .lt("last_updated_at", sevenDaysAgo.toISOString());
+
+      console.log("CHECKING ROADMAPS LAST UPDATED BEFORE:");
+      console.log(sevenDaysAgo.toISOString());
       console.log("ENTRIES =", entries);
       console.log("COUNT =", entries?.length);
 
@@ -47,7 +45,7 @@ export const sendInterviewReminder = inngest.createFunction(
       }
 
       if (!entries || entries.length === 0) {
-        console.log("No upcoming interviews to remind about");
+        console.log("No inactive roadmaps found");
         return { success: true, reminded: 0 };
       }
 
@@ -68,20 +66,24 @@ export const sendInterviewReminder = inngest.createFunction(
           .from("notifications")
           .select("id")
           .eq("user_id", userId)
-          .eq("type", "interview-reminder")
+          .eq("type", "roadmap-reminder")
           .gte("created_at", today.toISOString());
 
         if (existingNotification && existingNotification.length > 0) {
           console.log(`Notification already exists for ${entry.id}`);
           continue;
         }
+        const daysInactive = Math.floor(
+          (Date.now() - new Date(entry.last_updated_at).getTime()) /
+          (1000 * 60 * 60 * 24)
+        );
+
         const { error: notificationError } = await supabase
           .from("notifications")
           .insert({
             user_id: userId,
-            title: "Interview Tomorrow 🚀",
-            message: `${entry.company} • ${entry.role} • ${entry.round}`,
-            type: "interview-reminder",
+            text: `🚀 Your ${entry.role} roadmap has been waiting for ${daysInactive} days. Ready to continue?`,
+            type: "roadmap-reminder",
           });
 
         if (notificationError) {
@@ -90,9 +92,8 @@ export const sendInterviewReminder = inngest.createFunction(
         }
 
         console.log(
-          `Notification created for ${entry.company} - ${entry.role}`
+          `Roadmap reminder created for ${entry.role}`
         );
-
         remindedCount++;
       }
 

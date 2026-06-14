@@ -84,7 +84,7 @@ export default function TopNavbar() {
 
       console.log('Logout successful, redirecting...')
       setUserMenuOpen(false)
-      
+
       // Redirect to login
       setTimeout(() => {
         router.push('/auth/login')
@@ -214,7 +214,12 @@ export default function TopNavbar() {
                           }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[12px] leading-snug" style={{ color: 'var(--void)' }}>{n.text}</p>
+                          <p
+                            className="text-[12px] leading-snug"
+                            style={{ color: 'var(--void)' }}
+                          >
+                            {n.message}
+                          </p>
                           <p className="text-[10px] mt-0.5 font-mono-frag" style={{ color: 'rgba(26,16,53,0.35)' }}>{new Date(n.created_at).toLocaleString()}</p>
                         </div>
                       </div>

@@ -122,7 +122,7 @@ function StatCard({ s, i }: { s: any, i: number }) {
       </div>
       <p className="font-black text-[30px] leading-none tracking-tight mb-1"
         style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
-        {count}{s.suffix}
+        {count}{s.suffix || ''}
       </p>
       <p className="text-[11px]" style={{ color: 'rgba(26,16,53,0.4)' }}>{s.sub}</p>
     </motion.div>
@@ -233,17 +233,25 @@ export default function DashboardPage() {
   const [systemDesignScore, setSystemDesignScore] = useState(0)
   const [behavioralScore, setBehavioralScore] = useState(0)
   const stats = [
-    { label: 'Mock Interviews', value: mockCount, suffix: '', sub: '+3 this week', color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
+    { label: 'Mock Interviews', value: mockCount, suffix: '', sub: "", color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
     {
-      label: 'Day Streak',
-      value: streak,
+      label: 'Upcoming Interviews',
+      value: upcomingInterviews.length,
       suffix: '',
-      sub: 'Keep going 🔥',
+      sub: upcomingInterviews.length ? 'Scheduled & pending' : 'No upcoming',
       color: 'var(--amber)',
       bg: 'rgba(239,159,39,0.08)',
-      icon: Flame
+      icon: CalendarClock
     },
-    { label: 'Companies', value: companyCount, suffix: '', sub: '', color: 'var(--teal)', bg: 'rgba(29,158,117,0.08)', icon: Building2 },
+    {
+      label: 'Applications',
+      value: companyCount,
+      suffix: '',
+      sub: 'Unique companies tracked',
+      color: 'var(--teal)',
+      bg: 'rgba(29,158,117,0.08)',
+      icon: Building2
+    },
     {
       label: 'Roadmap',
       value: roadmap?.progress || 0,
@@ -306,7 +314,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchInterviews = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-const user = session?.user
+      const user = session?.user
       if (!user) return
 
       const { data, error } = await supabase
@@ -474,7 +482,7 @@ const user = session?.user
   useEffect(() => {
     const fetchRoadmap = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-const user = session?.user
+      const user = session?.user
       if (!user) return
 
       const { data, error } = await supabase

@@ -20,16 +20,44 @@ const item = {
 }
 
 const stats = [
-  { value: '2,400+', label: 'Students prepping' },
-  { value: '18k+', label: 'Mock interviews done' },
-  { value: '94%', label: 'Felt more confident' },
+  {
+    value: '01',
+    label: 'Track Interviews',
+  },
+  {
+    value: '02',
+    label: 'Practice with AI',
+  },
+  {
+    value: '03',
+    label: 'Improve Faster',
+  },
 ]
-
 const feed = [
-  { name: 'Priya M.', action: 'completed mock interview ·', company: 'Google SDE', time: '2m ago', color: '#1D9E75', bg: 'rgba(29,158,117,0.2)' },
-  { name: 'Karan S.', action: 'added to tracker ·', company: 'Flipkart PM', time: '7m ago', color: '#AFA9EC', bg: 'rgba(83,74,183,0.2)' },
-  { name: 'Aditi R.', action: 'generated roadmap for', company: 'Data Analyst', time: '12m ago', color: '#EF9F27', bg: 'rgba(239,159,39,0.2)' },
-  { name: 'Rohan T.', action: 'expanded idea ·', company: 'ML Portfolio App', time: '18m ago', color: '#AFA9EC', bg: 'rgba(175,169,236,0.15)' },
+  {
+    name: 'Mock Interviews',
+    action: 'Practice realistic interview scenarios with',
+    company: 'instant AI feedback',
+    time: '24/7',
+    color: '#AFA9EC',
+    bg: 'rgba(175,169,236,0.15)',
+  },
+  {
+    name: 'Interview Tracker',
+    action: 'Stay organized across applications, rounds, and',
+    company: 'upcoming deadlines',
+    time: 'Smart',
+    color: '#1D9E75',
+    bg: 'rgba(29,158,117,0.15)',
+  },
+  {
+    name: 'Prep Roadmaps',
+    action: 'Generate personalized preparation plans built around',
+    company: 'your target role',
+    time: 'AI',
+    color: '#EF9F27',
+    bg: 'rgba(239,159,39,0.15)',
+  },
 ]
 
 export default function LoginPage() {
@@ -95,18 +123,6 @@ export default function LoginPage() {
           transition={{ duration: 0.5, ease }}
           className="mb-8"
         >
-          <Link href="/" className="inline-flex items-center gap-2 no-underline group">
-            <span
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black"
-              style={{ background: 'var(--void)', color: 'var(--mist)', fontFamily: 'var(--font-archivo)' }}
-            >
-              P
-            </span>
-            <span className="font-black text-lg tracking-tight"
-              style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
-              PrepOS
-            </span>
-          </Link>
         </motion.div>
 
         <motion.div variants={container} initial="hidden" animate="show" className="max-w-sm w-full">
@@ -233,7 +249,7 @@ export default function LoginPage() {
           {/* Label */}
           <p className="font-mono-frag text-[10px] tracking-[0.12em] mb-6"
             style={{ color: 'rgba(175,169,236,0.5)' }}>
-            PREPOS · LIVE ACTIVITY
+            PREPOS · INTERVIEW OPERATING SYSTEM
           </p>
 
           {/* Stats */}
@@ -259,7 +275,7 @@ export default function LoginPage() {
           {/* Feed */}
           <p className="font-mono-frag text-[10px] tracking-[0.1em] mb-3"
             style={{ color: 'rgba(175,169,236,0.4)' }}>
-            RECENT ACTIVITY
+            WHAT YOU CAN DO
           </p>
 
           <div className="flex flex-col gap-2 mb-6">

@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { signupSchema } from '@/lib/validations/auth'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { CheckCircle2, Circle } from 'lucide-react'
 
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
@@ -56,6 +57,23 @@ export default function SignupPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [college, setCollege] = useState('')
+  const [showPasswordHints, setShowPasswordHints] = useState(false)
+  const passwordChecks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  }
+
+  const strengthScore = Object.values(passwordChecks).filter(Boolean).length
+
+  const strengthLabel =
+    strengthScore <= 2
+      ? 'Weak'
+      : strengthScore <= 4
+        ? 'Medium'
+        : 'Strong'
   const supabase = createClient()
   const router = useRouter()
   const handleGoogleLogin = async () => {
@@ -129,30 +147,20 @@ export default function SignupPage() {
     <div className="h-screen overflow-hidden flex font-familjen" style={{ background: 'var(--ghost)' }}>
 
       {/* ── LEFT: Form ── */}
-      <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-24 py-8">
+      <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-24 py-2">
 
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease }}
-          className="mb-6"
+          className="mb-3"
         >
-          <Link href="/" className="inline-flex items-center gap-2 no-underline">
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black"
-              style={{ background: 'var(--void)', color: 'var(--mist)', fontFamily: 'var(--font-archivo)' }}>
-              P
-            </span>
-            <span className="font-black text-lg tracking-tight"
-              style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
-              PrepOS
-            </span>
-          </Link>
         </motion.div>
 
         <motion.div variants={container} initial="hidden" animate="show" className="max-w-sm w-full">
 
           <motion.div variants={item} className="mb-1">
-            <span className="font-mono-frag text-[11px] tracking-[0.1em] uppercase" style={{ color: 'var(--brand)' }}>
+            <span className="font-mono-frag text-[11px] tracking-[0.1em] uppercase" style={{ color: 'var(--brand)' }} >
               Get started free
             </span>
           </motion.div>
@@ -164,7 +172,7 @@ export default function SignupPage() {
           </motion.h1>
 
           <motion.p variants={item} className="text-[15px] mb-5" style={{ color: 'rgba(26,16,53,0.5)' }}>
-            No credit card needed. Works for tier 1, 2 &amp; 3 colleges.
+            No credit card needed. Built for every student preparing for interviews.
           </motion.p>
 
           <motion.button
@@ -189,7 +197,11 @@ export default function SignupPage() {
             <div className="flex-1 h-px" style={{ background: 'var(--void-12)' }} />
           </motion.div>
 
-          <motion.form variants={item} onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <motion.form
+            variants={item}
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-2"
+          >
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[12px] font-semibold tracking-wide uppercase"
@@ -207,10 +219,10 @@ export default function SignupPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-[12px] font-semibold tracking-wide uppercase"
                 style={{ color: 'rgba(26,16,53,0.45)', fontFamily: 'var(--font-archivo)' }}>
-                College Email
+                Email Address
               </label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="arjun@iit.ac.in"
+                placeholder="arjun@gmail.com"
                 className="w-full rounded-xl px-4 py-3 text-[14px] outline-none transition-all duration-200"
                 style={{ background: '#fff', border: '1.5px solid var(--void-12)', color: 'var(--void)' }}
                 onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
@@ -233,36 +245,133 @@ export default function SignupPage() {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-semibold tracking-wide uppercase"
-                style={{ color: 'rgba(26,16,53,0.45)', fontFamily: 'var(--font-archivo)' }}>
+            <div className="flex flex-col gap-1.5 relative">
+              <label
+                className="text-[12px] font-semibold tracking-wide uppercase"
+                style={{
+                  color: 'rgba(26,16,53,0.45)',
+                  fontFamily: 'var(--font-archivo)',
+                }}
+              >
                 Password
               </label>
+
               <div className="relative">
-                <input type={showPass ? 'text' : 'password'} required value={password}
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  required
+                  value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Min. 8 characters"
                   className="w-full rounded-xl px-4 py-3 pr-11 text-[14px] outline-none transition-all duration-200"
-                  style={{ background: '#fff', border: '1.5px solid var(--void-12)', color: 'var(--void)' }}
-                  onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--void-12)')} />
-                <button type="button" onClick={() => setShowPass(p => !p)}
+                  style={{
+                    background: '#fff',
+                    border: '1.5px solid var(--void-12)',
+                    color: 'var(--void)',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--brand)'
+
+                    if (strengthScore < 5) {
+                      setShowPasswordHints(true)
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--void-12)'
+
+                    setTimeout(() => {
+                      setShowPasswordHints(false)
+                    }, 150)
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPass(p => !p)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs cursor-pointer"
-                  style={{ color: 'rgba(26,16,53,0.4)' }}>
+                  style={{ color: 'rgba(26,16,53,0.4)' }}
+                >
                   {showPass ? 'Hide' : 'Show'}
                 </button>
+
+                {showPasswordHints &&
+                  password.length > 0 &&
+                  strengthScore < 5 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute left-0 right-0 rounded-xl p-3 z-[999]"
+                      style={{
+                        top: 'calc(100% + 8px)',
+                        background: '#ffffff',
+                        border: '1px solid var(--void-12)',
+                        boxShadow: '0 18px 40px rgba(0,0,0,0.12)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className="text-[12px] font-semibold"
+                          style={{ color: 'var(--void)' }}
+                        >
+                          Password Strength
+                        </span>
+
+                        <span
+                          className="text-[12px] font-bold"
+                          style={{
+                            color:
+                              strengthLabel === 'Weak'
+                                ? '#EF4444'
+                                : strengthLabel === 'Medium'
+                                  ? '#F59E0B'
+                                  : '#10B981',
+                          }}
+                        >
+                          {strengthLabel}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-2 text-[10px]">
+                        {[
+                          [passwordChecks.length, '8+ chars'],
+                          [passwordChecks.uppercase, 'Uppercase'],
+                          [passwordChecks.lowercase, 'Lowercase'],
+                          [passwordChecks.number, 'Number'],
+                          [passwordChecks.special, 'Special char'],
+                        ].map(([passed, label]) => (
+                          <div
+                            key={String(label)}
+                            className="flex items-center gap-2"
+                          >
+                            {passed ? (
+                              <CheckCircle2
+                                size={12}
+                                style={{ color: '#10B981' }}
+                              />
+                            ) : (
+                              <Circle
+                                size={12}
+                                style={{ color: 'rgba(26,16,53,0.25)' }}
+                              />
+                            )}
+
+                            <span
+                              style={{
+                                color: passed
+                                  ? 'var(--void)'
+                                  : 'rgba(26,16,53,0.55)',
+                              }}
+                            >
+                              {label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
               </div>
             </div>
-
-            {password.length > 0 && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex gap-1.5">
-                {[8, 12, 16].map((len, i) => (
-                  <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300"
-                    style={{ background: password.length >= len ? i === 0 ? 'var(--amber)' : i === 1 ? 'var(--brand)' : 'var(--teal)' : 'var(--void-12)' }} />
-                ))}
-              </motion.div>
-            )}
-
             <motion.button type="submit" whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.97 }}
               disabled={loading}
               className="w-full rounded-xl py-3.5 text-[14px] font-bold mt-1 cursor-pointer transition-all duration-200 flex items-center justify-center gap-2"
@@ -275,16 +384,9 @@ export default function SignupPage() {
               )}
             </motion.button>
 
-            <p className="text-center text-[11px]" style={{ color: 'rgba(26,16,53,0.35)' }}>
-              By signing up you agree to our{' '}
-              <Link href="/terms" className="underline" style={{ color: 'var(--brand)' }}>Terms</Link>
-              {' '}&amp;{' '}
-              <Link href="/privacy" className="underline" style={{ color: 'var(--brand)' }}>Privacy Policy</Link>
-            </p>
-
           </motion.form>
 
-          <motion.p variants={item} className="text-[13px] text-center mt-6" style={{ color: 'rgba(26,16,53,0.5)' }}>
+          <motion.p variants={item} className="text-[13px] text-center mt-3" style={{ color: 'rgba(26,16,53,0.5)' }}>
             Already have an account?{' '}
             <Link href="/auth/login" className="font-semibold no-underline" style={{ color: 'var(--brand)' }}>
               Log in

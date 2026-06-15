@@ -137,10 +137,10 @@ export default function TopNavbar() {
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-2.5 no-underline flex-shrink-0">
             <Image
-              src="/Screenshot 2026-03-19 215740.png"
+              src="/Screenshot 2026-06-15 161722.png"
               alt="PrepOS"
-              width={34}
-              height={34}
+              width={62}
+              height={62}
               className="rounded-xl"
             />
             <span

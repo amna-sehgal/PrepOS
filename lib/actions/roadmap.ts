@@ -87,7 +87,7 @@ export async function generateAIRoadmap(input: GenerateRoadmapInput) {
       weeks: input.weeks,
       roadmap: parsed.weeks,
       is_active: true,
-      last_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .select()
     .single()
@@ -118,7 +118,7 @@ export async function updateRoadmapProgress(
     .from('prep_roadmaps')
     .update({
       roadmap: updatedWeeks,
-      last_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq('id', roadmapId)
     .eq('user_id', user.id)

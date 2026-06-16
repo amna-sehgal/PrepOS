@@ -50,10 +50,12 @@ export default function MockInterviewSetupPage() {
   const [difficulty, setDifficulty] = useState('Intermediate')
   const [type, setType] = useState('DSA')
   const [company, setCompany] = useState('')
+  const [customCompany, setCustomCompany] = useState('')
+  const [customCompanies, setCustomCompanies] = useState<string[]>([])
   const [hints, setHints] = useState(true)
   const [visibleSteps, setVisibleSteps] = useState(1)
   const [elapsed, setElapsed] = useState(47)
-  
+
 
   // Animate preview steps in sequence
   useEffect(() => {
@@ -83,8 +85,26 @@ export default function MockInterviewSetupPage() {
     }
   }
 
+  const handleAddCompany = () => {
+    const value = customCompany.trim()
+
+    if (!value) return
+
+    const exists =
+      companies.some(c => c.toLowerCase() === value.toLowerCase()) ||
+      customCompanies.some(c => c.toLowerCase() === value.toLowerCase())
+
+    if (!exists) {
+      setCustomCompanies(prev => [...prev, value])
+    }
+
+    setCompany(value)
+    setCustomCompany('')
+  }
+
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+
 
   return (
     <div className="min-h-screen font-familjen flex" style={{ background: 'var(--ghost)', color: 'var(--void)' }}>
@@ -207,12 +227,12 @@ export default function MockInterviewSetupPage() {
             <motion.div variants={fadeUp}>
               <label className="flex items-center gap-2 text-[12px] font-semibold tracking-widests uppercase mb-3"
                 style={{ color: 'rgba(26,16,53,0.45)', fontFamily: 'var(--font-archivo)' }}>
-                <Building2 size={13} strokeWidth={1.8} /> Target Company
+                <Building2 size={13} strokeWidth={1.8} />  Interview Company
                 <span className="normal-case font-normal tracking-normal text-[11px]"
                   style={{ color: 'rgba(26,16,53,0.35)' }}>— optional</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {companies.map(c => (
+                {[...companies, ...customCompanies].map(c => (
                   <motion.button key={c} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                     onClick={() => setCompany(company === c ? '' : c)}
                     className="px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all"
@@ -225,6 +245,36 @@ export default function MockInterviewSetupPage() {
                     {c}
                   </motion.button>
                 ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={customCompany}
+                  onChange={(e) => setCustomCompany(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCompany()}
+                  placeholder="e.g. Oracle, Nvidia, Goldman Sachs"
+                  className="flex-1 px-3 py-2.5 rounded-xl outline-none transition-all text-[13px]"
+                  style={{
+                    background: '#fff',
+                    border: '1.5px solid var(--void-12)',
+                    color: 'var(--void)',
+                    fontFamily: 'var(--font-archivo)',
+                  }}
+                />
+
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleAddCompany}
+                  className="px-4 py-2.5 rounded-xl text-[12px] font-semibold transition-all"
+                  style={{
+                    background: 'var(--void)',
+                    color: 'var(--mist)',
+                    border: '1.5px solid var(--void)',
+                    fontFamily: 'var(--font-archivo)',
+                  }}
+                >
+                  Add
+                </motion.button>
               </div>
             </motion.div>
 

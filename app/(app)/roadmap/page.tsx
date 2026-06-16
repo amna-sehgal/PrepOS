@@ -227,15 +227,29 @@ function useCountUp(target: number, delay = 0) {
   return count
 }
 
+
 // ── Setup screen ───────────────────────────────────────
 function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void }) {
   const [role, setRole] = useState('SDE Intern')
   const [selected, setSelected] = useState<string[]>([])
   const [weeks, setWeeks] = useState(8)
   const [loading, setLoading] = useState(false)
+  const [customCompany, setCustomCompany] = useState('')
+  const [customCompanies, setCustomCompanies] = useState<string[]>([])
 
-  const toggleCompany = (c: string) =>
-    setSelected(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
+  const toggleCompany = (c: string) => {
+    setSelected(prev => {
+      if (prev.includes(c)) {
+        return prev.filter(x => x !== c)
+      }
+
+      if (prev.length >= 3) {
+        return prev
+      }
+
+      return [...prev, c]
+    })
+  }
 
   const handleGenerate = async () => {
     setLoading(true)
@@ -269,7 +283,25 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
       setLoading(false)
     }
   }
+  const handleAddCompany = () => {
+    const company = customCompany.trim()
 
+    if (!company) return
+
+    const exists =
+      companies.some(c => c.toLowerCase() === company.toLowerCase()) ||
+      customCompanies.some(c => c.toLowerCase() === company.toLowerCase())
+
+    if (!exists) {
+      setCustomCompanies(prev => [...prev, company])
+    }
+
+    if (!selected.includes(company) && selected.length < 3) {
+      setSelected(prev => [...prev, company])
+    }
+
+    setCustomCompany('')
+  }
   return (
     <motion.div variants={stagger} initial="hidden" animate="show"
       className="max-w-xl mx-auto px-5 md:px-0 py-10">
@@ -321,11 +353,17 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
           <label className="flex items-center gap-2 text-[12px] font-semibold tracking-widest uppercase mb-3"
             style={{ color: 'rgba(26,16,53,0.45)', fontFamily: 'var(--font-archivo)' }}>
             <Building2 size={13} strokeWidth={1.8} /> Target Companies
+            <span
+              className="normal-case font-normal tracking-normal text-[11px]"
+              style={{ color: 'rgba(26,16,53,0.35)' }}
+            >
+              — optional, select up to 3
+            </span>
             <span className="normal-case font-normal tracking-normal text-[11px]"
               style={{ color: 'rgba(26,16,53,0.35)' }}>— optional, select multiple</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            {companies.map(c => (
+            {[...companies, ...customCompanies].map(c => (
               <motion.button key={c} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                 onClick={() => toggleCompany(c)}
                 className="px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all"
@@ -338,6 +376,47 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
                 {c}
               </motion.button>
             ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={customCompany}
+              onChange={(e) => setCustomCompany(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCompany()}
+              placeholder="e.g. Nvidia, Goldman Sachs, Uber"
+              className="flex-1 px-3 py-2.5 rounded-xl outline-none transition-all text-[13px]"
+              style={{
+                background: '#fff',
+                border: '1.5px solid var(--void-12)',
+                color: 'var(--void)',
+                fontFamily: 'var(--font-archivo)',
+              }}
+            />
+            {selected.length === 3 && (
+              <p
+                className="text-[11px] mt-2"
+                style={{
+                  color: 'rgba(26,16,53,0.45)',
+                  fontFamily: 'var(--font-archivo)',
+                }}
+              >
+                Maximum 3 companies can be selected.
+              </p>
+            )}
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleAddCompany}
+              className="px-4 py-2.5 rounded-xl text-[12px] font-semibold transition-all"
+              style={{
+                background: 'var(--void)',
+                color: 'var(--mist)',
+                border: '1.5px solid var(--void)',
+                fontFamily: 'var(--font-archivo)',
+              }}
+            >
+              Add
+            </motion.button>
           </div>
         </motion.div>
 
@@ -632,9 +711,9 @@ function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () =
         }
         : w
     )
-    
+
     setWeeks(updatedWeeks)
-    
+
     // Persist to database
     if (config.id) {
       try {

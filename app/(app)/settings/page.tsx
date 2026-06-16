@@ -288,13 +288,7 @@ function Section({ children, id }: { children: React.ReactNode; id: string }) {
 }
 
 // ── Sticky section nav ─────────────────────────────────
-const sections = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'targets', label: 'Targets', icon: Target },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'password', label: 'Password', icon: Lock },
-  { id: 'danger', label: 'Danger', icon: Trash2 },
-]
+
 
 // ── Main page ──────────────────────────────────────────
 export default function SettingsPage() {
@@ -323,20 +317,6 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [savedProfile, setSavedProfile] = useState(false)
 
-  // Targets
-  const [targetRole, setTargetRole] = useState('SDE Intern')
-  const [targetCompanies, setTargetCompanies] = useState<string[]>(['Google', 'Razorpay', 'Flipkart'])
-  const [savingTargets, setSavingTargets] = useState(false)
-  const [savedTargets, setSavedTargets] = useState(false)
-
-  // Notifications
-  const [notifInterviewReminder, setNotifInterviewReminder] = useState(true)
-  const [notifPrepPlan, setNotifPrepPlan] = useState(true)
-  const [notifStreak, setNotifStreak] = useState(false)
-  const [notifEmail, setNotifEmail] = useState(true)
-  const [savingNotif, setSavingNotif] = useState(false)
-  const [savedNotif, setSavedNotif] = useState(false)
-
   // Password
   const [currentPass, setCurrentPass] = useState('')
   const [newPass, setNewPass] = useState('')
@@ -363,34 +343,6 @@ export default function SettingsPage() {
     }, 1000)
   }
 
-  const toggleCompany = (c: string) =>
-    setTargetCompanies(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-      if (data) {
-        setTargetRole(data.target_role || '')
-        setTargetCompanies(data.target_companies || [])
-
-        if (data.notifications) {
-          setNotifInterviewReminder(data.notifications.interviewReminder ?? true)
-          setNotifPrepPlan(data.notifications.prepPlan ?? true)
-          setNotifStreak(data.notifications.streak ?? false)
-          setNotifEmail(data.notifications.email ?? true)
-        }
-      }
-    }
-
-    fetchSettings()
-  }, [supabase])
   const saveSettings = async (updates: any) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -464,38 +416,6 @@ export default function SettingsPage() {
           </p>
         </motion.div>
 
-        {/* ── Section nav pills ── */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease, delay: 0.1 }}
-          className="flex gap-2 flex-wrap mb-7 p-3 rounded-2xl"
-          style={{ background: '#fff', border: '1.5px solid var(--void-12)' }}>
-          {sections.map(s => {
-            const Icon = s.icon
-            const isDanger = s.id === 'danger'
-            return (
-              <motion.a key={s.id} href={`#${s.id}`}
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[12px] font-bold no-underline cursor-pointer transition-all"
-                style={{
-                  color: isDanger ? 'var(--coral)' : 'rgba(26,16,53,0.5)',
-                  fontFamily: 'var(--font-archivo)',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = isDanger ? 'rgba(226,75,74,0.08)' : 'var(--ghost)'
-                  el.style.color = isDanger ? 'var(--coral)' : 'var(--void)'
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'transparent'
-                  el.style.color = isDanger ? 'var(--coral)' : 'rgba(26,16,53,0.5)'
-                }}>
-                <Icon size={12} strokeWidth={1.8} /> {s.label}
-              </motion.a>
-            )
-          })}
-        </motion.div>
-
         {/* ── Sections ── */}
         <motion.div variants={stagger} initial="hidden" animate="show" className="flex flex-col gap-5">
 
@@ -558,128 +478,6 @@ export default function SettingsPage() {
                     }
                   }}
                   saving={savingProfile} saved={savedProfile} />
-              </div>
-            </div>
-          </Section>
-
-          {/* ── Targets ── */}
-          <Section id="targets">
-            <SectionHeader icon={Target} title="Interview Targets"
-              description="Your goals shape your roadmap and AI prep suggestions." color="var(--brand)" />
-            <div className="flex flex-col gap-4">
-              <Field label="Target Role">
-                <div className="flex flex-wrap gap-2">
-                  {roles.map(r => (
-                    <motion.button key={r} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                      onClick={() => setTargetRole(r)}
-                      className="px-3 py-1.5 rounded-xl text-[12px] font-semibold cursor-pointer transition-all"
-                      style={{
-                        background: targetRole === r ? 'var(--void)' : 'var(--ghost)',
-                        color: targetRole === r ? 'var(--mist)' : 'rgba(26,16,53,0.55)',
-                        border: targetRole === r ? '1.5px solid var(--void)' : '1.5px solid var(--void-12)',
-                        fontFamily: 'var(--font-archivo)',
-                      }}>
-                      {r}
-                    </motion.button>
-                  ))}
-                </div>
-              </Field>
-
-              <Field label="Target Companies">
-                <div className="flex flex-wrap gap-2">
-                  {companies.map(c => (
-                    <motion.button key={c} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                      onClick={() => toggleCompany(c)}
-                      className="px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all"
-                      style={{
-                        background: targetCompanies.includes(c) ? 'rgba(83,74,183,0.1)' : 'var(--ghost)',
-                        color: targetCompanies.includes(c) ? 'var(--brand)' : 'rgba(26,16,53,0.5)',
-                        border: `1.5px solid ${targetCompanies.includes(c) ? 'rgba(83,74,183,0.3)' : 'var(--void-12)'}`,
-                        fontFamily: 'var(--font-archivo)',
-                      }}>
-                      {c}
-                    </motion.button>
-                  ))}
-                </div>
-                {targetCompanies.length > 0 && (
-                  <p className="text-[11px] mt-1" style={{ color: 'rgba(26,16,53,0.4)' }}>
-                    {targetCompanies.length} selected — your roadmap and prep plans will be tailored to these.
-                  </p>
-                )}
-              </Field>
-
-              <div className="flex justify-end pt-1">
-                <SaveButton
-                  onClick={async () => {
-                    setSavingTargets(true)
-
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (!user) return
-
-                    const error = await saveSettings({
-                      target_role: targetRole,
-                      target_companies: targetCompanies,
-                    })
-
-                    setSavingTargets(false)
-
-                    if (!error) {
-                      setSavedTargets(true)
-                      setTimeout(() => setSavedTargets(false), 2500)
-                    } else {
-                      console.error("ERROR MESSAGE:", error?.message)
-                      console.error("FULL ERROR:", error)
-                    }
-                  }}
-                  saving={savingTargets} saved={savedTargets} />
-              </div>
-            </div>
-          </Section>
-
-          {/* ── Notifications ── */}
-          <Section id="notifications">
-            <SectionHeader icon={Bell} title="Notifications"
-              description="Control what PrepOS notifies you about." color="var(--amber)" />
-            <div className="flex flex-col gap-3">
-              <Toggle on={notifInterviewReminder} onToggle={() => setNotifInterviewReminder(p => !p)}
-                label="Interview reminders"
-                description="Get notified 7 days before a logged interview date with your AI prep plan." />
-              <Toggle on={notifPrepPlan} onToggle={() => setNotifPrepPlan(p => !p)}
-                label="AI prep plan ready"
-                description="Alert when PrepOS generates a prep plan for an upcoming interview." />
-              <Toggle on={notifStreak} onToggle={() => setNotifStreak(p => !p)}
-                label="Daily streak reminders"
-                description="Nudge if you haven't practiced today to keep your streak alive." />
-              <Toggle on={notifEmail} onToggle={() => setNotifEmail(p => !p)}
-                label="Email notifications"
-                description="Receive important updates via email in addition to in-app notifications." />
-
-              <div className="flex justify-end pt-1">
-                <SaveButton
-                  onClick={async () => {
-                    setSavingNotif(true)
-
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (!user) return
-                    const error = await saveSettings({
-                      notifications: {
-                        interviewReminder: notifInterviewReminder,
-                        prepPlan: notifPrepPlan,
-                        streak: notifStreak,
-                        email: notifEmail,
-                      },
-                    })
-
-                    setSavingNotif(false)
-
-                    if (!error) {
-                      setSavedNotif(true)
-                      setTimeout(() => setSavedNotif(false), 2500)
-                    } else {
-                      console.error(error)
-                    }
-                  }}
-                  saving={savingNotif} saved={savedNotif} />
               </div>
             </div>
           </Section>

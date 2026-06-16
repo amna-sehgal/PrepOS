@@ -60,7 +60,6 @@ export async function startMockInterview(input: StartMockInput) {
       hints: input.hints,
       total_questions: totalQuestions,
       transcript,
-      date: new Date().toISOString(), 
     })
     .select()
     .single()

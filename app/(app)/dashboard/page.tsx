@@ -32,6 +32,18 @@ const slideRight = {
   show: { opacity: 1, x: 0, transition: { duration: 0.55, ease } },
 }
 
+function normalizeType(type: string) {
+  if (!type) return 'unknown'
+
+  const t = type.toLowerCase().replace(/\s/g, '_')
+
+  if (t.includes('dsa')) return 'dsa'
+  if (t.includes('system')) return 'system_design'
+  if (t.includes('behavior')) return 'behavioral'
+
+  return t
+}
+
 function useCountUp(target: number, duration = 1200, delay = 0) {
   const [count, setCount] = useState(0)
   useEffect(() => {
@@ -274,8 +286,8 @@ export default function DashboardPage() {
     if (!completedInterviews.length) return
 
     const scores = completedInterviews
-      .map((item: any) => item.score)
-      .filter((s: number) => s !== null)
+      .map((i: any) => i.score ?? i.report?.overall)
+      .filter((s: number) => typeof s === 'number')
 
     if (scores.length === 0) return
 
@@ -475,22 +487,45 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!completedInterviews.length) return
 
-    const latest = [...completedInterviews]
-      .filter((i: any) => i.report)
-      .sort(
-        (a: any, b: any) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
-      )[0]?.report
+    let dsaTotal = 0, dsaCount = 0
+    let sdTotal = 0, sdCount = 0
+    let behTotal = 0, behCount = 0
 
-    if (!latest) return
+    completedInterviews.forEach((i: any) => {
+      const type = normalizeType(i.type)
 
-    setDsaScore((latest as any).dsa || 0)
-    setSystemDesignScore((latest as any).system_design || 0)
-    setBehavioralScore((latest as any).behavioral || 0)
+      const score =
+        i.report?.overall ??
+        i.score ??
+        0
+
+      if (type === 'dsa') {
+        dsaTotal += score
+        dsaCount++
+      }
+
+      if (type === 'system_design') {
+        sdTotal += score
+        sdCount++
+      }
+
+      if (type === 'behavioral') {
+        behTotal += score
+        behCount++
+      }
+    })
+
+    setDsaScore(dsaCount ? Math.round(dsaTotal / dsaCount) : 0)
+    setSystemDesignScore(sdCount ? Math.round(sdTotal / sdCount) : 0)
+    setBehavioralScore(behCount ? Math.round(behTotal / behCount) : 0)
   }, [completedInterviews])
 
   useEffect(() => {
+
+    const isDone = (t: any) =>
+      t.done === true ||
+      t.done === 'true' ||
+      t.done === 1
     const fetchRoadmap = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       const user = session?.user
@@ -512,12 +547,12 @@ export default function DashboardPage() {
         if (roadmapData.roadmap && Array.isArray(roadmapData.roadmap)) {
           const weeks = roadmapData.roadmap
           const totalTopics = weeks.reduce((sum: number, w: any) => sum + (w.topics?.length || 0), 0)
-          const completedTopics = weeks.reduce((sum: number, w: any) => sum + (w.topics?.filter((t: any) => t.done)?.length || 0), 0)
+          const completedTopics = weeks.reduce((sum: number, w: any) => sum + (w.topics?.filter(isDone)?.length || 0), 0)
           const remainingTopics = totalTopics - completedTopics
           const progress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0
 
           // Find current week (first week with incomplete topics)
-          const currentWeek = weeks.findIndex((w: any) => w.topics?.some((t: any) => !t.done)) + 1 || weeks.length
+          const currentWeek = weeks.findIndex((w: any) => w.topics?.some((t: any) => !isDone(t))) + 1 || weeks.length
 
           setRoadmap({
             ...roadmapData,

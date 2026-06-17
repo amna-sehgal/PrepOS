@@ -12,6 +12,7 @@ import {
   CalendarClock, BrainCircuit, Trophy, Activity,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 
 const pageContainer = {
@@ -96,14 +97,16 @@ function greetingIcon(h: number) {
   return Moon
 }
 
-function StatCard({ s, i }: { s: any, i: number }) {
+function StatCard({ s, i, href }: { s: any, i: number, href: string }) {
+  const router = useRouter()
   const Icon = s.icon
   const count = useCountUp(s.value, 900, 120 + i * 80)
+
   return (
     <motion.div
-      variants={fadeUp}
+      onClick={() => router.push(href)}
       whileHover={{ y: -3, boxShadow: '0 12px 32px rgba(26,16,53,0.09)' }}
-      className="rounded-2xl px-5 py-4 transition-all cursor-default group"
+      className="rounded-2xl px-5 py-4 transition-all cursor-pointer"
       style={{ background: '#fff', border: '1.5px solid var(--void-12)' }}
     >
       <div className="flex items-center justify-between mb-3">
@@ -223,7 +226,6 @@ export default function DashboardPage() {
   const readinessCount = useCountUp(readiness, 1000, 400)
   const supabase = createClient()
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([])
-  const [mockCount, setMockCount] = useState(0)
   const [companyCount, setCompanyCount] = useState(0)
   const [streak, setStreak] = useState(0)
   const [recentScores, setRecentScores] = useState<any[]>([])
@@ -233,7 +235,7 @@ export default function DashboardPage() {
   const [systemDesignScore, setSystemDesignScore] = useState(0)
   const [behavioralScore, setBehavioralScore] = useState(0)
   const stats = [
-    { label: 'Mock Interviews', value: mockCount, suffix: '', sub: "", color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
+    { label: 'Mock Interviews', value: completedInterviews.length, suffix: '', sub: "", color: 'var(--brand)', bg: 'rgba(83,74,183,0.08)', icon: Mic2 },
     {
       label: 'Upcoming Interviews',
       value: upcomingInterviews.length,
@@ -261,6 +263,12 @@ export default function DashboardPage() {
       bg: 'rgba(226,75,74,0.08)',
       icon: TrendingUp
     },
+  ]
+  const statRoutes = [
+    '/dashboard/history',
+    '/tracker',
+    '/tracker',
+    '/roadmap'
   ]
   useEffect(() => {
     if (!completedInterviews.length) return
@@ -313,6 +321,7 @@ export default function DashboardPage() {
   }, [])
   useEffect(() => {
     const fetchInterviews = async () => {
+
       const { data: { session } } = await supabase.auth.getSession()
       const user = session?.user
       if (!user) return
@@ -340,7 +349,7 @@ export default function DashboardPage() {
         });
 
         const upcoming = enrichedData
-          .filter((item: any) => !item.score)
+          .filter((item: any) => item.score === null || item.score === undefined)
           .map((item: any) => {
             // Calculate days left
             const interviewDate = item.date ? new Date(item.date) : new Date()
@@ -354,12 +363,17 @@ export default function DashboardPage() {
           .filter((item: any) => item.daysLeft > 0)  // Only show actual upcoming interviews
 
         setUpcomingInterviews(upcoming)
+        const uniqueCompanies = new Set(
+          enrichedData
+            .map((i: any) => i.company)
+            .filter((c: any) => typeof c === 'string' && c.trim().length > 0)
+            .map((c: string) => c.trim().toLowerCase())
+        )
+        const completed = enrichedData.filter(
+          (i: any) => i.score !== null && i.score !== undefined
+        )
 
-        setMockCount(enrichedData.length)
-
-        const uniqueCompanies = new Set(enrichedData.map((item: any) => item.company))
-        setCompanyCount(uniqueCompanies.size)
-        const completed = enrichedData.filter((item: any) => typeof item.score === 'number')
+        setCompanyCount(uniqueCompanies.size || 0)
 
         setCompletedInterviews(completed)
         setRecentScores(
@@ -382,6 +396,7 @@ export default function DashboardPage() {
     }
 
     fetchInterviews()
+
     const channel = supabase
       .channel('mock-interviews-realtime')
       .on(
@@ -458,25 +473,21 @@ export default function DashboardPage() {
 
   // Calculate scores for each interview type
   useEffect(() => {
-    if (!completedInterviews.length) {
-      setDsaScore(0)
-      setSystemDesignScore(0)
-      setBehavioralScore(0)
-      return
-    }
+    if (!completedInterviews.length) return
 
-    // Get latest scores for each type
-    const dsa = getLatestScoreForType(completedInterviews, 'DSA')
-    const sd = getLatestScoreForType(completedInterviews, 'System Design')
-    // Handle both "Behavioural" and "HR / Behavioural"
-    const behavioral = Math.max(
-      getLatestScoreForType(completedInterviews, 'Behavioural'),
-      getLatestScoreForType(completedInterviews, 'HR / Behavioural')
-    ) || 0
+    const latest = [...completedInterviews]
+      .filter((i: any) => i.report)
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.created_at).getTime() -
+          new Date(a.created_at).getTime()
+      )[0]?.report
 
-    setDsaScore(dsa)
-    setSystemDesignScore(sd)
-    setBehavioralScore(behavioral)
+    if (!latest) return
+
+    setDsaScore((latest as any).dsa || 0)
+    setSystemDesignScore((latest as any).system_design || 0)
+    setBehavioralScore((latest as any).behavioral || 0)
   }, [completedInterviews])
 
   useEffect(() => {
@@ -784,7 +795,14 @@ export default function DashboardPage() {
         {/* ── Stats row ── */}
         <motion.div variants={pageContainer} initial="hidden" animate="show"
           className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-7">
-          {stats.map((s, i) => <StatCard key={i} s={s} i={i} />)}
+          {stats.map((s, i) => (
+            <StatCard
+              key={i}
+              s={s}
+              i={i}
+              href={statRoutes[i]}
+            />
+          ))}
         </motion.div>
 
         {/* ── Main grid ── */}
@@ -877,7 +895,7 @@ export default function DashboardPage() {
                   </p>
                 </motion.div>
                 <motion.div variants={fadeIn}>
-                  <Link href="/mock-interview" className="inline-flex items-center gap-1 text-[12px] font-semibold no-underline group"
+                  <Link href="/history" className="inline-flex items-center gap-1 text-[12px] font-semibold no-underline group"
                     style={{ color: 'var(--brand)' }}>
                     View all
                     <motion.span whileHover={{ x: 2 }} transition={{ type: 'spring', stiffness: 400 }}>

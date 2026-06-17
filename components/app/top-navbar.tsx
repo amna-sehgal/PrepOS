@@ -94,6 +94,22 @@ export default function TopNavbar() {
     fetchNotifications()
   }, [])
 
+  const clearAllNotifications = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
+
+    if (!user) return
+
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (!error) {
+      setNotifications([])
+    }
+  }
+
   const handleLogout = async () => {
     try {
       setLoggingOut(true)
@@ -219,14 +235,41 @@ export default function TopNavbar() {
                     className="absolute right-0 top-10 w-72 rounded-2xl overflow-hidden shadow-xl z-50"
                     style={{ background: '#fff', border: '1.5px solid var(--void-12)' }}
                   >
-                    <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--void-12)' }}>
-                      <span className="font-bold text-[13px]" style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
+                    <div
+                      className="px-4 py-3 flex items-center justify-between"
+                      style={{ borderBottom: '1px solid var(--void-12)' }}
+                    >
+                      <span
+                        className="font-bold text-[13px]"
+                        style={{
+                          fontFamily: 'var(--font-archivo)',
+                          color: 'var(--void)'
+                        }}
+                      >
                         Notifications
                       </span>
-                      <span className="font-mono-frag text-[10px] px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(226,75,74,0.1)', color: 'var(--coral)' }}>
-                        {unreadCount} new
-                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="font-mono-frag text-[10px] px-2 py-0.5 rounded-full"
+                          style={{
+                            background: 'rgba(226,75,74,0.1)',
+                            color: 'var(--coral)'
+                          }}
+                        >
+                          {unreadCount} new
+                        </span>
+
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={clearAllNotifications}
+                            className="text-[10px] font-medium hover:opacity-70"
+                            style={{ color: 'var(--coral)' }}
+                          >
+                            Clear All
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {notifications.length === 0 ? (
                       <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'rgba(26,16,53,0.4)' }}>

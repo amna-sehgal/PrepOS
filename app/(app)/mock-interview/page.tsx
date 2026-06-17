@@ -9,6 +9,9 @@ import {
   ToggleRight, Clock, CheckCircle2, MinusCircle, Dot,
 } from 'lucide-react'
 import { startMockInterview } from '@/lib/actions/mock'
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 const container = {
@@ -51,12 +54,27 @@ export default function MockInterviewSetupPage() {
   const [type, setType] = useState('DSA')
   const [company, setCompany] = useState('')
   const [customCompany, setCustomCompany] = useState('')
-  const [customCompanies, setCustomCompanies] = useState<string[]>([])
+  const [dbCompanies, setDbCompanies] = useState<string[]>([])
   const [hints, setHints] = useState(true)
   const [visibleSteps, setVisibleSteps] = useState(1)
   const [elapsed, setElapsed] = useState(47)
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      const { data, error } = await supabase
+        .from('user_custom_companies')
+        .select('name')
 
+      if (error) {
+        console.error(error)
+        return
+      }
+
+      setDbCompanies(data.map((c: any) => c.name))
+    }
+
+    fetchCompanies()
+  }, [])
   // Animate preview steps in sequence
   useEffect(() => {
     if (visibleSteps >= previewSteps.length) return
@@ -85,17 +103,39 @@ export default function MockInterviewSetupPage() {
     }
   }
 
-  const handleAddCompany = () => {
+  const handleAddCompany = async () => {
     const value = customCompany.trim()
-
     if (!value) return
 
-    const exists =
-      companies.some(c => c.toLowerCase() === value.toLowerCase()) ||
-      customCompanies.some(c => c.toLowerCase() === value.toLowerCase())
+    const user = await supabase.auth.getUser()
+    const userId = user.data.user?.id
 
-    if (!exists) {
-      setCustomCompanies(prev => [...prev, value])
+    if (!userId) return
+
+    // normalize check (UI only, not DB blocking)
+    const existsInUI =
+      companies.some(c => c.toLowerCase() === value.toLowerCase()) ||
+      dbCompanies.some(c => c.toLowerCase() === value.toLowerCase())
+
+    if (!existsInUI) {
+      const { error } = await supabase
+        .from('user_custom_companies')
+        .upsert(
+          {
+            name: value,
+            user_id: userId,
+          },
+          {
+            onConflict: 'user_id,name',
+          }
+        )
+
+      if (error) {
+        console.error(error)
+        return
+      }
+
+      setDbCompanies(prev => [...prev, value])
     }
 
     setCompany(value)
@@ -232,7 +272,7 @@ export default function MockInterviewSetupPage() {
                   style={{ color: 'rgba(26,16,53,0.35)' }}>— optional</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {[...companies, ...customCompanies].map(c => (
+                {[...companies, ...dbCompanies].map(c => (
                   <motion.button key={c} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                     onClick={() => setCompany(company === c ? '' : c)}
                     className="px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all"

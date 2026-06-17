@@ -11,6 +11,10 @@ import {
 } from 'lucide-react'
 import { generateAIRoadmap } from '@/lib/actions/roadmap'
 import RoadmapHistory from '@/components/RoadmapHistory'
+import { useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
 
 const ease = cubicBezier(0.22, 1, 0.36, 1)
 const fadeUp = {
@@ -21,6 +25,8 @@ const stagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
 }
+
+
 
 // ── Types ──────────────────────────────────────────────
 type Topic = { id: string; label: string; done: boolean }
@@ -235,7 +241,24 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
   const [weeks, setWeeks] = useState(8)
   const [loading, setLoading] = useState(false)
   const [customCompany, setCustomCompany] = useState('')
-  const [customCompanies, setCustomCompanies] = useState<string[]>([])
+  const [dbCompanies, setDbCompanies] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      const { data, error } = await supabase
+        .from('user_custom_companies')
+        .select('name')
+
+      if (error) {
+        console.error(error)
+        return
+      }
+
+      setDbCompanies(data?.map((c: any) => c.name) || [])
+    }
+
+    fetchCompanies()
+  }, [])
 
   const toggleCompany = (c: string) => {
     setSelected(prev => {
@@ -283,17 +306,36 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
       setLoading(false)
     }
   }
-  const handleAddCompany = () => {
+  const handleAddCompany = async () => {
     const company = customCompany.trim()
-
     if (!company) return
+
+    const user = await supabase.auth.getUser()
+    const userId = user.data.user?.id
+
+    if (!userId) return
 
     const exists =
       companies.some(c => c.toLowerCase() === company.toLowerCase()) ||
-      customCompanies.some(c => c.toLowerCase() === company.toLowerCase())
+      dbCompanies.some(c => c.toLowerCase() === company.toLowerCase())
 
     if (!exists) {
-      setCustomCompanies(prev => [...prev, company])
+      const { error } = await supabase
+        .from('user_custom_companies')
+        .upsert(
+          {
+            name: company,
+            user_id: userId,
+          },
+          { onConflict: 'user_id,name' }
+        )
+
+      if (error) {
+        console.error(error)
+        return
+      }
+
+      setDbCompanies(prev => [...prev, company])
     }
 
     if (!selected.includes(company) && selected.length < 3) {
@@ -363,7 +405,7 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
               style={{ color: 'rgba(26,16,53,0.35)' }}>— optional, select multiple</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            {[...companies, ...customCompanies].map(c => (
+            {[...companies, ...dbCompanies].map(c => (
               <motion.button key={c} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                 onClick={() => toggleCompany(c)}
                 className="px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer transition-all"

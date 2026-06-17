@@ -163,33 +163,64 @@ export async function POST(
       transcript: updatedTranscript,
     }
 
-    let reportInfo = null;
+    let reportInfo = null
 
     if (finished) {
-      let score = 0;
-      let correct = 0;
-      let partial = 0;
-      let wrong = 0;
+      let score = 0
+      let correct = 0
+      let partial = 0
+      let wrong = 0
 
-      const aiFeedbacks = updatedTranscript.filter((t: any) => t.role === 'ai' && t.feedback);
+      const aiFeedbacks = updatedTranscript.filter(
+        (t: any) => t.role === 'ai' && t.feedback
+      )
+
       if (aiFeedbacks.length > 0) {
-        let totalScore = 0;
+        let totalScore = 0
+
         aiFeedbacks.forEach((t: any) => {
-          totalScore += Number(t.feedback.score) || 0;
-          if (t.feedback.status === 'correct') correct++;
-          else if (t.feedback.status === 'partial') partial++;
-          else wrong++;
-        });
-        score = Math.round(totalScore / aiFeedbacks.length);
+          totalScore += Number(t.feedback.score) || 0
+
+          if (t.feedback.status === 'correct') correct++
+          else if (t.feedback.status === 'partial') partial++
+          else wrong++
+        })
+
+        score = Math.round(totalScore / aiFeedbacks.length)
       }
 
-      const reportPrompt = `Analyze this interview transcript and provide exactly 2 weak areas and 3 topics to revise next. Return ONLY valid JSON: { "weakAreas": ["area1", "area2"], "reviseTopics": ["topic1", "topic2", "topic3"] }. Transcript: ${JSON.stringify(updatedTranscript.map((t: any) => ({ role: t.role, text: t.text })))}`;
+      const reportPrompt = `
+Analyze this interview transcript and provide exactly:
+- 2 weak areas
+- 3 topics to revise
+
+Return ONLY valid JSON:
+
+{
+  "weakAreas": ["area1", "area2"],
+  "reviseTopics": ["topic1", "topic2", "topic3"]
+}
+
+Transcript:
+${JSON.stringify(
+        updatedTranscript.map((t: any) => ({
+          role: t.role,
+          text: t.text,
+        }))
+      )}
+`
+
       try {
-        const reportAi = await askOpenRouter(reportPrompt);
-        const cleanJson = reportAi.replace(/```json/gi, '').replace(/```/g, '').trim();
-        reportInfo = JSON.parse(cleanJson);
+        const reportAi = await askOpenRouter(reportPrompt)
+
+        const cleanJson = reportAi
+          .replace(/```json/gi, '')
+          .replace(/```/g, '')
+          .trim()
+
+        reportInfo = JSON.parse(cleanJson)
       } catch (err) {
-        console.error('Failed to generate report schema:', err);
+        console.error('Failed to generate report schema:', err)
       }
 
       updatedTranscript.push({
@@ -201,8 +232,42 @@ export async function POST(
         wrong,
         weakAreas: reportInfo?.weakAreas || [],
         reviseTopics: reportInfo?.reviseTopics || [],
-        completedAt: new Date().toISOString()
-      });
+        completedAt: new Date().toISOString(),
+      })
+      const startedAt = session.created_at ? new Date(session.created_at).getTime() : Date.now()
+      const endedAt = Date.now()
+
+      const elapsedSeconds = Math.floor((endedAt - startedAt) / 1000)
+
+      updatePayload.elapsed = elapsedSeconds
+
+      updatePayload.transcript = updatedTranscript
+
+      updatePayload.status = 'completed'
+
+      updatePayload.completed_at =
+        new Date().toISOString()
+
+      updatePayload.weak_areas =
+        reportInfo?.weakAreas || []
+
+      updatePayload.revise_topics =
+        reportInfo?.reviseTopics || []
+
+      updatePayload.report = {
+        overall: score,
+
+        dsa: Math.round(score * 0.6),
+        system_design: Math.round(score * 0.2),
+        behavioral: Math.round(score * 0.2),
+
+        correct,
+        partial,
+        wrong,
+
+        weakAreas: reportInfo?.weakAreas || [],
+        reviseTopics: reportInfo?.reviseTopics || [],
+      }
     }
 
     const { error: updateError } = await supabase

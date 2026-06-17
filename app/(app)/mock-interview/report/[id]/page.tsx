@@ -89,9 +89,28 @@ export default function MockInterviewReportPage() {
           elapsed: data.elapsed || 0,
 
           // convert transcript → feedbacks
-          feedbacks: (data.transcript || [])
-            .filter((t: any) => t.feedback)
-            .map((t: any) => t.feedback),
+          feedbacks: (() => {
+            const result: any[] = []
+
+            const aiQuestions = (data.transcript || []).filter(
+              (t: any) => t.role === 'ai' && !t.feedback
+            )
+
+            const aiFeedbacks = (data.transcript || []).filter(
+              (t: any) => t.role === 'ai' && t.feedback
+            )
+
+            aiFeedbacks.forEach((fb: any, i: number) => {
+              result.push({
+                text: aiQuestions[i]?.text || 'Question not found',
+                score: fb.feedback.score,
+                status: fb.feedback.status,
+                hint: fb.feedback.hint,
+              })
+            })
+
+            return result
+          })(),
 
           completedAt: data.completedAt,
           weakAreas: data.weakAreas,
@@ -376,21 +395,6 @@ export default function MockInterviewReportPage() {
 
         {/* Actions */}
         <motion.div variants={fadeUp} className="flex gap-3 flex-wrap">
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: '0 6px 20px rgba(26,16,53,0.15)' }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => router.push('/mock-interview')}
-            className="flex-1 py-3.5 rounded-2xl text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2"
-            style={{ background: 'var(--void)', color: 'var(--mist)', fontFamily: 'var(--font-archivo)' }}>
-            <RotateCcw size={14} strokeWidth={2} /> Try Again
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-            className="flex-1 py-3.5 rounded-2xl text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2"
-            style={{ background: '#fff', color: 'var(--void)', border: '1.5px solid var(--void-12)', fontFamily: 'var(--font-archivo)' }}>
-            <Download size={14} strokeWidth={1.8} /> Download PDF
-          </motion.button>
 
           <Link href="/dashboard" className="no-underline">
             <motion.div

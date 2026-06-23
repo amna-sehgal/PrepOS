@@ -379,35 +379,48 @@ export default function DashboardPage() {
           .filter((item: any) => item.daysLeft > 0)  // Only show actual upcoming interviews
 
         setUpcomingInterviews(upcoming)
+        const applicationData = enrichedData.filter((i: any) => {
+          const company = i?.company?.trim()?.toLowerCase()
+
+          return (
+            company &&
+            company !== '' &&
+            company !== 'undefined' &&
+            company !== 'null' &&
+            company !== 'unknown'
+          )
+        })
+
         const uniqueCompanies = new Set(
-          enrichedData
-            .map((i: any) => i.company)
-            .filter((c: any) => typeof c === 'string' && c.trim().length > 0)
-            .map((c: string) => c.trim().toLowerCase())
+          applicationData.map((i: any) => i.company.trim().toLowerCase())
         )
+
+        setCompanyCount(applicationData.length > 0 ? uniqueCompanies.size : 0)
         const completed = enrichedData.filter(
-          (i: any) => i.score !== null && i.score !== undefined
+          (item: any) => item.score !== null && item.score !== undefined
         )
 
-        setCompanyCount(uniqueCompanies.size || 0)
+        const safeCompleted = Array.isArray(completed) ? completed : []
 
-        setCompletedInterviews(completed)
+        setCompletedInterviews(safeCompleted)
+
         setRecentScores(
-          completed
+          safeCompleted
             .slice(-5)
             .reverse()
             .map((item: any) => ({
               role: item.role,
               type: item.type || 'Mock',
               date: item.date || 'Recently',
-              score: item.score || 0,
+              score: item.score ?? 0,
               breakdown: {
-                correct: item.correct || 0,
-                partial: item.partial || 0,
-                wrong: item.wrong || 0,
+                correct: item.correct ?? 0,
+                partial: item.partial ?? 0,
+                wrong: item.wrong ?? 0,
               },
             }))
         )
+
       }
     }
 
@@ -427,6 +440,7 @@ export default function DashboardPage() {
         }
       )
       .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
     }
@@ -744,7 +758,9 @@ export default function DashboardPage() {
 
     // 6. Brainstorm ideas need expansion
     if (brainstormCards.length > 0 && suggestions.length < 3) {
-      const unstructuredCards = brainstormCards.filter((c: any) => !c.isExpanded)
+      const unstructuredCards = brainstormCards.filter((c: any) => {
+        return !c.isExpanded && c.status !== 'expanded' && !c.ai_expanded
+      })
       if (unstructuredCards.length > 0) {
         suggestions.push({
           icon: Lightbulb,
@@ -804,28 +820,6 @@ export default function DashboardPage() {
               <span style={{ color: 'rgba(26,16,53,0.2)' }}>·</span>
               Here&apos;s where you stand today
             </p>
-          </motion.div>
-
-          <motion.div variants={fadeUp} className="flex items-center gap-2 flex-wrap">
-            {quickActions.map((q, i) => {
-              const Icon = q.icon
-              return (
-                <Link key={i} href={q.href}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 + i * 0.07, duration: 0.4, ease }}
-                    whileHover={{ scale: 1.05, y: -2, boxShadow: '0 6px 20px rgba(26,16,53,0.1)' }}
-                    whileTap={{ scale: 0.96 }}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-semibold cursor-pointer"
-                    style={{ background: '#fff', border: '1.5px solid var(--void-12)', color: 'var(--void)', fontFamily: 'var(--font-archivo)' }}
-                  >
-                    <Icon size={13} strokeWidth={1.8} />
-                    <span>{q.label}</span>
-                  </motion.div>
-                </Link>
-              )
-            })}
           </motion.div>
         </motion.div>
 

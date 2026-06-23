@@ -156,33 +156,24 @@ function DeleteModal({ onClose }: { onClose: () => void }) {
   const ready = confirm === 'DELETE'
 
   const handleDelete = async () => {
-    if (!ready) return
-
     setDeleting(true)
 
-    const supabase = createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
     try {
-      // 1. Delete user data (IMPORTANT: order matters if FK exists)
+      const res = await fetch('/api/delete-account', {
+        method: 'POST'
+      })
 
-      await supabase.from('user_settings').delete().eq('user_id', user.id)
-      await supabase.from('brainstorm_cards').delete().eq('user_id', user.id)
-      await supabase.from('mock_interviews').delete().eq('user_id', user.id)
+      const data = await res.json()
 
-      // add any other tables you created
+      if (!res.ok) {
+        throw new Error(data.error)
+      }
 
-      // 2. Sign out user
-      await supabase.auth.signOut()
-
-      // 3. Redirect to landing/login
       window.location.href = '/'
 
     } catch (err) {
       console.error(err)
-      alert("Something went wrong")
+      alert('Failed to delete account')
       setDeleting(false)
     }
   }

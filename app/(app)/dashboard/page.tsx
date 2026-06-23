@@ -286,7 +286,11 @@ export default function DashboardPage() {
     if (!completedInterviews.length) return
 
     const scores = completedInterviews
-      .map((i: any) => i.score ?? i.report?.overall)
+      .map((i: any) => {
+        const score = i.score ?? i.report?.overall
+        return typeof score === 'number' ? score : null
+      })
+      .filter((s): s is number => s !== null)
       .filter((s: number) => typeof s === 'number')
 
     if (scores.length === 0) return
@@ -487,37 +491,35 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!completedInterviews.length) return
 
-    let dsaTotal = 0, dsaCount = 0
-    let sdTotal = 0, sdCount = 0
-    let behTotal = 0, behCount = 0
+    let dsa: number[] = []
+    let sd: number[] = []
+    let beh: number[] = []
+
+    const getType = (i: any) => {
+      const raw = (i.type || '').toLowerCase()
+
+      if (raw.includes('dsa')) return 'dsa'
+      if (raw.includes('system')) return 'system_design'
+      if (raw.includes('behav')) return 'behavioral'
+
+      return 'unknown'
+    }
 
     completedInterviews.forEach((i: any) => {
-      const type = normalizeType(i.type)
+      const type = getType(i)
+      const score = i.score ?? i.report?.overall ?? 0
 
-      const score =
-        i.report?.overall ??
-        i.score ??
-        0
-
-      if (type === 'dsa') {
-        dsaTotal += score
-        dsaCount++
-      }
-
-      if (type === 'system_design') {
-        sdTotal += score
-        sdCount++
-      }
-
-      if (type === 'behavioral') {
-        behTotal += score
-        behCount++
-      }
+      if (type === 'dsa') dsa.push(score)
+      if (type === 'system_design') sd.push(score)
+      if (type === 'behavioral') beh.push(score)
     })
 
-    setDsaScore(dsaCount ? Math.round(dsaTotal / dsaCount) : 0)
-    setSystemDesignScore(sdCount ? Math.round(sdTotal / sdCount) : 0)
-    setBehavioralScore(behCount ? Math.round(behTotal / behCount) : 0)
+    const avg = (arr: number[]) =>
+      arr.length ? Math.round(arr.reduce((a, b) => a + b) / arr.length) : 0
+
+    setDsaScore(avg(dsa))
+    setSystemDesignScore(avg(sd))
+    setBehavioralScore(avg(beh))
   }, [completedInterviews])
 
   useEffect(() => {
@@ -676,13 +678,13 @@ export default function DashboardPage() {
     if (completedInterviews.length > 0 && suggestions.length < 3) {
       const dsaAvg = Math.round(
         completedInterviews
-          .filter((i: any) => i.type === 'DSA')
+          .filter((i: any) => (i.type || '').toLowerCase().includes('dsa'))
           .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
         (completedInterviews.filter((i: any) => i.type === 'DSA').length || 1)
       )
       const sdAvg = Math.round(
         completedInterviews
-          .filter((i: any) => i.type === 'System Design')
+          .filter((i: any) => (i.type || '').toLowerCase().includes('system'))
           .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
         (completedInterviews.filter((i: any) => i.type === 'System Design').length || 1)
       )
@@ -1013,13 +1015,6 @@ export default function DashboardPage() {
                     <p className="text-[10px]">Current Week</p>
                     <p className="font-bold text-[18px]">
                       {roadmap?.inProgress || 0}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl p-3" style={{ background: 'rgba(226,75,74,0.05)' }}>
-                    <p className="text-[10px]">Left</p>
-                    <p className="font-bold text-[18px]">
-                      {roadmap?.left || 0}
                     </p>
                   </div>
                 </div>

@@ -120,6 +120,16 @@ Score honestly using this rubric:
 ---
 
 IMPORTANT RULES:
+ALWAYS generate a hint.
+
+The hint must:
+- be specific to the question
+- be based on the user's answer
+- guide improvement (not full solution)
+- differ based on score:
+  - correct → optimization hint
+  - partial → missing concept hint
+  - incorrect → direction hint
 - Be strict, not generous
 - Do NOT default to 80–90
 - Avoid rounding to nice numbers
@@ -132,7 +142,8 @@ Return ONLY valid JSON:
 {
   "feedback": "2-4 lines of honest critique",
   "score": number,
-  "status": "correct | partial | incorrect"
+  "status": "correct | partial | incorrect",
+  "hint": "a short, specific hint that helps improve this exact answer"
 }
 `
 }

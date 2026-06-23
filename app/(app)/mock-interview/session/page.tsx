@@ -53,7 +53,7 @@ export default function MockInterviewSessionPage() {
   // Load config from localStorage
   useEffect(() => {
     const storedSessionId = localStorage.getItem('prepos_session_id')
-console.log("🔥 SESSION ID FROM LOCALSTORAGE:", storedSessionId)
+    console.log("🔥 SESSION ID FROM LOCALSTORAGE:", storedSessionId)
 
     if (!storedSessionId) {
       router.push('/mock-interview')
@@ -139,6 +139,10 @@ console.log("🔥 SESSION ID FROM LOCALSTORAGE:", storedSessionId)
 
     setCurrentHint(data.hint || '')
 
+    if (data.hint) {
+      setShowHint(true)
+    }
+
     setMessages((m) => [
       ...m,
       {
@@ -170,7 +174,7 @@ console.log("🔥 SESSION ID FROM LOCALSTORAGE:", storedSessionId)
         weakAreas: data.reportInfo?.weakAreas || ['System Design Basics', 'General Problem Solving'],
         reviseTopics: data.reportInfo?.reviseTopics || ['Data Structures', 'Algorithmic Patterns', 'Code Optimization']
       }
-      
+
       localStorage.setItem(`prepos_report_${sessionId}`, JSON.stringify(reportData))
       return
     }

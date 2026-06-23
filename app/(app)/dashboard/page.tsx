@@ -926,7 +926,7 @@ export default function DashboardPage() {
                   </p>
                 </motion.div>
                 <motion.div variants={fadeIn}>
-                  <Link href="/history" className="inline-flex items-center gap-1 text-[12px] font-semibold no-underline group"
+                  <Link href="/dashboard/history" className="inline-flex items-center gap-1 text-[12px] font-semibold no-underline group"
                     style={{ color: 'var(--brand)' }}>
                     View all
                     <motion.span whileHover={{ x: 2 }} transition={{ type: 'spring', stiffness: 400 }}>

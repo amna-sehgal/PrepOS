@@ -692,6 +692,8 @@ export default function TrackerPage() {
         .select()
         .single()
 
+      console.log("INSERT DEBUG:", { data, error })
+
       if (!error && data) {
         savedSuccessfully = true
 

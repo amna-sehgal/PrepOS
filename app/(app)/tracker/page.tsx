@@ -653,15 +653,17 @@ export default function TrackerPage() {
     } = await supabase.auth.getUser()
 
     if (!user) return
+
     if (e.status !== 'Interview') {
       e.interviewDate = ''
     }
+
     const payload = {
       user_id: user.id,
       company: e.company,
       role: e.role,
-      applied_date: e.appliedDate,
-      interview_date: e.interviewDate,
+      applied_date: e.appliedDate || null,
+      interview_date: e.interviewDate || null,
       round: e.round,
       status: e.status,
       notes: e.notes,

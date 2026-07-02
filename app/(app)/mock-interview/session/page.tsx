@@ -34,6 +34,43 @@ function getQCount(difficulty: string) {
   return 4
 }
 
+const fallbackHint = 'Start with your main idea, then add a concrete example and explain your reasoning clearly.'
+
+function getTimeLimit(config: Config | null) {
+  if (!config) return 0
+
+  const type = config.type?.toLowerCase() || ''
+  const difficulty = config.difficulty?.toLowerCase() || ''
+
+  if (type.includes('hr') || type.includes('behavioural')) {
+    if (difficulty.includes('beginner')) return 15 * 60
+    if (difficulty.includes('advanced')) return 25 * 60
+    return 20 * 60
+  }
+
+  if (type.includes('dsa')) {
+    if (difficulty.includes('beginner')) return 30 * 60
+    if (difficulty.includes('advanced')) return 60 * 60
+    return 45 * 60
+  }
+
+  if (type.includes('system')) {
+    if (difficulty.includes('beginner')) return 30 * 60
+    if (difficulty.includes('advanced')) return 60 * 60
+    return 45 * 60
+  }
+
+  if (type.includes('mixed')) {
+    if (difficulty.includes('beginner')) return 25 * 60
+    if (difficulty.includes('advanced')) return 45 * 60
+    return 35 * 60
+  }
+
+  if (difficulty.includes('beginner')) return 20 * 60
+  if (difficulty.includes('advanced')) return 45 * 60
+  return 30 * 60
+}
+
 export default function MockInterviewSessionPage() {
   const router = useRouter()
   const [config, setConfig] = useState<Config | null>(null)
@@ -48,7 +85,9 @@ export default function MockInterviewSessionPage() {
   const [initialized, setInitialized] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [currentHint, setCurrentHint] = useState('')
+  const [currentHint, setCurrentHint] = useState(fallbackHint)
+  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [timeExpired, setTimeExpired] = useState(false)
 
   // Load config from localStorage
   useEffect(() => {
@@ -71,29 +110,127 @@ export default function MockInterviewSessionPage() {
         difficulty: data.difficulty,
         type: data.interview_type,
         company: data.company,
-        hints: data.hints,
+        hints: data.hints !== false,
       })
       setTotalQ(data.totalQuestions)
 
-      setMessages([
-        {
-          role: 'ai',
-          text: data.firstQuestion,
-          questionIndex: 0,
-        },
-      ])
+      const transcript = Array.isArray(data.transcript) ? data.transcript : []
+      const restoredMessages = transcript.filter((entry: any) => entry.role === 'ai' || entry.role === 'user').map((entry: any) => ({
+        role: entry.role,
+        text: entry.text,
+        feedback: entry.feedback ? {
+          text: entry.feedback.text,
+          score: entry.feedback.score,
+          status: entry.feedback.status,
+          hint: entry.feedback.hint,
+        } : undefined,
+        questionIndex: entry.questionIndex,
+      }))
 
+      if (restoredMessages.length > 0) {
+        setMessages(restoredMessages)
+      } else {
+        setMessages([
+          {
+            role: 'ai',
+            text: data.firstQuestion,
+            questionIndex: 0,
+          },
+        ])
+      }
+
+      const activeQuestion = [...transcript].reverse().find((entry: any) => entry.role === 'ai' && entry.questionIndex !== undefined && !entry.feedback)
+      setCurrentQ(typeof activeQuestion?.questionIndex === 'number' ? activeQuestion.questionIndex : 0)
+      setFinished(transcript.some((entry: any) => entry.role === 'system' && entry.isSummary))
+      setShowHint(false)
       setInitialized(true)
     }
 
     loadSession()
   }, [router])
 
-  // Timer
+  // Session timer
   useEffect(() => {
     const t = setInterval(() => setElapsed(e => e + 1), 1000)
     return () => clearInterval(t)
   }, [])
+
+  useEffect(() => {
+    if (!sessionId || !config || !initialized || finished) {
+      if (finished && sessionId) {
+        localStorage.removeItem(`prepos_timer_${sessionId}`)
+      }
+      return
+    }
+
+    const limit = getTimeLimit(config)
+    const timerKey = `prepos_timer_${sessionId}`
+    const savedTimer = localStorage.getItem(timerKey)
+
+    if (savedTimer) {
+      try {
+        const parsed = JSON.parse(savedTimer)
+        const elapsedSeconds = Math.floor((Date.now() - parsed.startedAt) / 1000)
+        const remaining = Math.max((parsed.limit || limit) - elapsedSeconds, 0)
+        setTimeRemaining(remaining)
+        setTimeExpired(remaining <= 0)
+        setElapsed(Math.min(elapsedSeconds, parsed.limit || limit))
+      } catch {
+        localStorage.removeItem(timerKey)
+        const startedAt = Date.now()
+        localStorage.setItem(timerKey, JSON.stringify({ startedAt, limit }))
+        setTimeRemaining(limit)
+      }
+    } else {
+      const startedAt = Date.now()
+      localStorage.setItem(timerKey, JSON.stringify({ startedAt, limit }))
+      setTimeRemaining(limit)
+    }
+  }, [sessionId, config, initialized, finished])
+
+  useEffect(() => {
+    if (!sessionId || !config || timeExpired || finished) return
+
+    const limit = getTimeLimit(config)
+    if (limit <= 0) return
+
+    const timerKey = `prepos_timer_${sessionId}`
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          localStorage.removeItem(timerKey)
+          setTimeExpired(true)
+          return 0
+        }
+
+        const next = prev - 1
+        const startedAt = Number(JSON.parse(localStorage.getItem(timerKey) || '{}')?.startedAt || Date.now())
+        localStorage.setItem(timerKey, JSON.stringify({ startedAt, limit }))
+        return next
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [sessionId, config, timeExpired, finished])
+
+  useEffect(() => {
+    if (!timeExpired || !sessionId || finished) return
+
+    const completeInterview = async () => {
+      try {
+        await fetch(`/api/mock/${sessionId}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'timeout' }),
+        })
+      } catch (err) {
+        console.error('Failed to auto-complete interview:', err)
+      }
+    }
+
+    completeInterview()
+  }, [timeExpired, sessionId, finished])
 
   // Auto-scroll
   useEffect(() => {
@@ -102,6 +239,12 @@ export default function MockInterviewSessionPage() {
 
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+
+  const formatCountdown = (s: number) => {
+    const minutes = Math.floor(s / 60)
+    const seconds = s % 60
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
 
   const handleSend = async () => {
     if (!input.trim() || awaitingFeedback || !sessionId) return
@@ -137,11 +280,12 @@ export default function MockInterviewSessionPage() {
       return
     }
 
-    setCurrentHint(data.hint || '')
+    const hintText = typeof data.hint === 'string' && data.hint.trim()
+      ? data.hint.trim()
+      : fallbackHint
 
-    if (data.hint) {
-      setShowHint(true)
-    }
+    setCurrentHint(hintText)
+    setShowHint(Boolean(hintText) && config?.hints !== false)
 
     setMessages((m) => [
       ...m,
@@ -152,7 +296,7 @@ export default function MockInterviewSessionPage() {
           text: data.feedback,
           score: data.score,
           status: data.status,
-          hint: data.hint,
+          hint: hintText,
         },
       },
     ])
@@ -235,7 +379,11 @@ export default function MockInterviewSessionPage() {
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5 font-mono-frag text-[12px]"
             style={{ color: 'rgba(26,16,53,0.45)' }}>
-            <Clock size={12} strokeWidth={1.8} />{formatTime(elapsed)}
+            <Clock size={12} strokeWidth={1.8} />{formatCountdown(timeRemaining)}
+          </span>
+          <span className="inline-flex items-center gap-1.5 font-mono-frag text-[12px]"
+            style={{ color: timeRemaining <= 60 ? 'var(--coral)' : 'rgba(26,16,53,0.45)' }}>
+            <Clock size={12} strokeWidth={1.8} />{formatCountdown(timeRemaining)} left
           </span>
           <span className="text-[12px] font-semibold"
             style={{ color: 'rgba(26,16,53,0.45)', fontFamily: 'var(--font-archivo)' }}>
@@ -363,7 +511,7 @@ export default function MockInterviewSessionPage() {
                     <Lightbulb size={13} strokeWidth={1.8}
                       style={{ color: 'var(--amber)', flexShrink: 0, marginTop: 1 }} />
                     <p className="text-[12px] flex-1" style={{ color: 'rgba(26,16,53,0.65)' }}>
-                      {currentHint}
+                      {currentHint || fallbackHint}
                     </p>
                     <button onClick={() => setShowHint(false)} className="cursor-pointer flex-shrink-0">
                       <X size={12} strokeWidth={2} style={{ color: 'rgba(26,16,53,0.3)' }} />
@@ -373,7 +521,10 @@ export default function MockInterviewSessionPage() {
               ) : (
                 <motion.button key="hint-btn"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  onClick={() => setShowHint(true)}
+                  onClick={() => {
+                    setCurrentHint((prev) => prev || fallbackHint)
+                    setShowHint(true)
+                  }}
                   className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer px-3 py-1.5 rounded-lg transition-all"
                   style={{
                     background: 'rgba(239,159,39,0.08)', color: 'var(--amber)',

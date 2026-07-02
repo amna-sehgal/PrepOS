@@ -217,6 +217,16 @@ function ScoreRow({ r, i, total }: { r: any, i: number, total: number }) {
   )
 }
 
+function getInterviewCategory(item: any) {
+  const raw = String(item?.interview_type || item?.type || '').toLowerCase()
+
+  if (raw.includes('dsa')) return 'dsa'
+  if (raw.includes('system')) return 'system_design'
+  if (raw.includes('behav') || raw.includes('hr')) return 'behavioral'
+
+  return 'unknown'
+}
+
 export default function DashboardPage() {
   type UserState = {
     name: string
@@ -261,7 +271,7 @@ export default function DashboardPage() {
       label: 'Applications',
       value: companyCount,
       suffix: '',
-      sub: 'Unique companies tracked',
+      sub: companyCount ? `${companyCount} tracked` : 'No applications',
       color: 'var(--teal)',
       bg: 'rgba(29,158,117,0.08)',
       icon: Building2
@@ -336,6 +346,56 @@ export default function DashboardPage() {
     fetchBrainstormCards()
   }, [])
   useEffect(() => {
+    const fetchTrackerApplications = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        setCompanyCount(0)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('tracker_entries')
+        .select('id, company')
+        .eq('user_id', user.id)
+
+      if (!error && data) {
+        const trackedApplications = data.filter((entry: any) => {
+          const company = entry?.company?.toString().trim()
+          return Boolean(company)
+        })
+
+        setCompanyCount(trackedApplications.length)
+      } else {
+        setCompanyCount(0)
+      }
+    }
+
+    fetchTrackerApplications()
+
+    const trackerChannel = supabase
+      .channel('tracker-entries-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tracker_entries',
+        },
+        () => {
+          fetchTrackerApplications()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(trackerChannel)
+    }
+  }, [])
+
+  useEffect(() => {
     const fetchInterviews = async () => {
 
       const { data: { session } } = await supabase.auth.getSession()
@@ -379,23 +439,6 @@ export default function DashboardPage() {
           .filter((item: any) => item.daysLeft > 0)  // Only show actual upcoming interviews
 
         setUpcomingInterviews(upcoming)
-        const applicationData = enrichedData.filter((i: any) => {
-          const company = i?.company?.trim()?.toLowerCase()
-
-          return (
-            company &&
-            company !== '' &&
-            company !== 'undefined' &&
-            company !== 'null' &&
-            company !== 'unknown'
-          )
-        })
-
-        const uniqueCompanies = new Set(
-          applicationData.map((i: any) => i.company.trim().toLowerCase())
-        )
-
-        setCompanyCount(applicationData.length > 0 ? uniqueCompanies.size : 0)
         const completed = enrichedData.filter(
           (item: any) => item.score !== null && item.score !== undefined
         )
@@ -410,7 +453,7 @@ export default function DashboardPage() {
             .reverse()
             .map((item: any) => ({
               role: item.role,
-              type: item.type || 'Mock',
+              type: item.interview_type || item.type || 'Mock',
               date: item.date || 'Recently',
               score: item.score ?? 0,
               breakdown: {
@@ -509,18 +552,8 @@ export default function DashboardPage() {
     let sd: number[] = []
     let beh: number[] = []
 
-    const getType = (i: any) => {
-      const raw = (i.type || '').toLowerCase()
-
-      if (raw.includes('dsa')) return 'dsa'
-      if (raw.includes('system')) return 'system_design'
-      if (raw.includes('behav')) return 'behavioral'
-
-      return 'unknown'
-    }
-
     completedInterviews.forEach((i: any) => {
-      const type = getType(i)
+      const type = getInterviewCategory(i)
       const score = i.score ?? i.report?.overall ?? 0
 
       if (type === 'dsa') dsa.push(score)
@@ -690,17 +723,16 @@ export default function DashboardPage() {
 
     // 3. Low readiness in specific category
     if (completedInterviews.length > 0 && suggestions.length < 3) {
+      const dsaInterviews = completedInterviews.filter((i: any) => getInterviewCategory(i) === 'dsa')
+      const sdInterviews = completedInterviews.filter((i: any) => getInterviewCategory(i) === 'system_design')
+
       const dsaAvg = Math.round(
-        completedInterviews
-          .filter((i: any) => (i.type || '').toLowerCase().includes('dsa'))
-          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
-        (completedInterviews.filter((i: any) => i.type === 'DSA').length || 1)
+        dsaInterviews.reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (dsaInterviews.length || 1)
       )
       const sdAvg = Math.round(
-        completedInterviews
-          .filter((i: any) => (i.type || '').toLowerCase().includes('system'))
-          .reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
-        (completedInterviews.filter((i: any) => i.type === 'System Design').length || 1)
+        sdInterviews.reduce((sum: number, i: any) => sum + (i.score || 0), 0) /
+        (sdInterviews.length || 1)
       )
 
       if (dsaAvg < 60 && dsaAvg > 0) {

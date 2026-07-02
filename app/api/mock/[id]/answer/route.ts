@@ -6,6 +6,17 @@ import {
 } from '@/lib/gemini/prompts'
 import { NextResponse } from 'next/server'
 
+function getFallbackHint(status: string) {
+  switch (status) {
+    case 'correct':
+      return 'Refine your answer by adding one concrete example and a clear trade-off.'
+    case 'partial':
+      return 'Focus on the core concept, mention a concrete example, and explain why it works.'
+    default:
+      return 'Start with the main idea, then add a concrete example and explain the reasoning clearly.'
+  }
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -97,6 +108,11 @@ export async function POST(
       }
     }
 
+    const fallbackHint = getFallbackHint(parsed.status || 'incorrect')
+    const hintText = typeof parsed.hint === 'string' && parsed.hint.trim()
+      ? parsed.hint.trim()
+      : fallbackHint
+
     const feedbackEntry = {
       role: 'user',
       text: answer,
@@ -111,7 +127,7 @@ export async function POST(
         text: parsed.feedback,
         score: parsed.score,
         status: parsed.status,
-        hint: parsed.hint || '',
+        hint: hintText,
       },
     }
 
@@ -286,7 +302,7 @@ ${JSON.stringify(
       feedback: parsed.feedback,
       score: parsed.score,
       status: parsed.status,
-      hint: parsed.hint,
+      hint: hintText,
       strengths: parsed.strengths || [],
       improvements: parsed.improvements || [],
       finished,

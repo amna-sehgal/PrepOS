@@ -4,9 +4,9 @@ import { motion, cubicBezier, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
-  Mic2, Target, Gauge, Layers, Building2, Lightbulb,
-  Play, BrainCircuit, MessageSquare, Sparkles, ToggleLeft,
-  ToggleRight, Clock, CheckCircle2, MinusCircle, Dot,
+  Mic2, Target, Gauge, Layers, Building2,
+  Play, BrainCircuit, MessageSquare, Sparkles, Clock,
+  CheckCircle2, MinusCircle, Dot,
 } from 'lucide-react'
 import { startMockInterview } from '@/lib/actions/mock'
 import { createClient } from '@/lib/supabase/client'
@@ -37,6 +37,39 @@ const interviewTypes = [
 ]
 const companies = ['Google', 'Amazon', 'Flipkart', 'Razorpay', 'Atlassian', 'Microsoft', 'Adobe', 'Swiggy', 'Zepto', 'CRED', 'PhonePe', 'Meesho']
 
+function getEstimatedTime(type: string, difficulty: string) {
+  const normalizedType = type.toLowerCase()
+  const normalizedDifficulty = difficulty.toLowerCase()
+
+  if (normalizedType.includes('hr') || normalizedType.includes('behavioural')) {
+    if (normalizedDifficulty.includes('beginner')) return '15 min'
+    if (normalizedDifficulty.includes('advanced')) return '25 min'
+    return '20 min'
+  }
+
+  if (normalizedType.includes('dsa')) {
+    if (normalizedDifficulty.includes('beginner')) return '30 min'
+    if (normalizedDifficulty.includes('advanced')) return '60 min'
+    return '45 min'
+  }
+
+  if (normalizedType.includes('system')) {
+    if (normalizedDifficulty.includes('beginner')) return '30 min'
+    if (normalizedDifficulty.includes('advanced')) return '60 min'
+    return '45 min'
+  }
+
+  if (normalizedType.includes('mixed')) {
+    if (normalizedDifficulty.includes('beginner')) return '25 min'
+    if (normalizedDifficulty.includes('advanced')) return '45 min'
+    return '35 min'
+  }
+
+  if (normalizedDifficulty.includes('beginner')) return '20 min'
+  if (normalizedDifficulty.includes('advanced')) return '45 min'
+  return '30 min'
+}
+
 // Preview conversation that cycles to feel alive
 const previewSteps = [
   { type: 'ai', text: 'Q1: Given an array of integers, find the two numbers that add up to a target sum. What is the most optimal approach?' },
@@ -55,9 +88,7 @@ export default function MockInterviewSetupPage() {
   const [company, setCompany] = useState('')
   const [customCompany, setCustomCompany] = useState('')
   const [dbCompanies, setDbCompanies] = useState<string[]>([])
-  const [hints, setHints] = useState(true)
   const [visibleSteps, setVisibleSteps] = useState(1)
-  const [elapsed, setElapsed] = useState(47)
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -83,14 +114,8 @@ export default function MockInterviewSetupPage() {
     return () => clearTimeout(t)
   }, [visibleSteps])
 
-  // Tick the preview timer
-  useEffect(() => {
-    const t = setInterval(() => setElapsed(e => e + 1), 1000)
-    return () => clearInterval(t)
-  }, [])
-
   const handleStart = async () => {
-    const config = { role, difficulty, type, company, hints }
+    const config = { role, difficulty, type, company, hints: true }
 
     try {
       const result = await startMockInterview(config)
@@ -141,10 +166,6 @@ export default function MockInterviewSetupPage() {
     setCompany(value)
     setCustomCompany('')
   }
-
-  const formatTime = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-
 
   return (
     <div className="min-h-screen font-familjen flex" style={{ background: 'var(--ghost)', color: 'var(--void)' }}>
@@ -318,32 +339,6 @@ export default function MockInterviewSetupPage() {
               </div>
             </motion.div>
 
-            {/* Hints toggle */}
-            <motion.div variants={fadeUp}
-              className="flex items-center justify-between px-5 py-4 rounded-2xl"
-              style={{ background: '#fff', border: '1.5px solid var(--void-12)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(239,159,39,0.1)' }}>
-                  <Lightbulb size={16} strokeWidth={1.8} style={{ color: 'var(--amber)' }} />
-                </div>
-                <div>
-                  <p className="font-bold text-[14px]"
-                    style={{ fontFamily: 'var(--font-archivo)', color: 'var(--void)' }}>
-                    Enable hints
-                  </p>
-                  <p className="text-[12px]" style={{ color: 'rgba(26,16,53,0.45)' }}>
-                    AI gives nudges if you get stuck
-                  </p>
-                </div>
-              </div>
-              <motion.button whileTap={{ scale: 0.92 }} onClick={() => setHints(h => !h)} className="cursor-pointer">
-                {hints
-                  ? <ToggleRight size={32} strokeWidth={1.5} style={{ color: 'var(--brand)' }} />
-                  : <ToggleLeft size={32} strokeWidth={1.5} style={{ color: 'rgba(26,16,53,0.25)' }} />}
-              </motion.button>
-            </motion.div>
-
             {/* Estimated time */}
             <motion.div variants={fadeUp}
               className="flex items-center gap-2 px-4 py-3 rounded-xl"
@@ -352,7 +347,7 @@ export default function MockInterviewSetupPage() {
               <p className="text-[12px]" style={{ color: 'rgba(26,16,53,0.55)' }}>
                 Estimated time:{' '}
                 <span className="font-semibold" style={{ color: 'var(--void)', fontFamily: 'var(--font-archivo)' }}>
-                  {difficulty === 'Beginner' ? '10–15' : difficulty === 'Intermediate' ? '15–20' : '20–30'} min
+                  {getEstimatedTime(type, difficulty)}
                 </span>
                 &nbsp;·&nbsp; {difficulty} {type}{company ? ` · ${company}` : ''}
               </p>
@@ -405,9 +400,6 @@ export default function MockInterviewSetupPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="font-mono-frag text-[11px]" style={{ color: 'rgba(247,246,253,0.35)' }}>
-                {formatTime(elapsed)}
-              </span>
               <span className="font-mono-frag text-[10px] px-2 py-0.5 rounded-full"
                 style={{ background: 'rgba(175,169,236,0.15)', color: '#AFA9EC' }}>
                 Q2 / 4

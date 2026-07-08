@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { startMockInterview } from '@/lib/actions/mock'
 import { createClient } from '@/lib/supabase/client'
+import { Suspense } from "react";
 
 const supabase = createClient()
 
@@ -80,7 +81,7 @@ const previewSteps = [
   { type: 'feedback', text: "Excellent! Floyd's algorithm is the optimal solution. Clean explanation of the two-pointer technique.", score: 95, status: 'correct' },
 ]
 
-export default function MockInterviewSetupPage() {
+function MockInterviewSetupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [roadmapLoading, setRoadmapLoading] = useState(false)
@@ -594,4 +595,20 @@ export default function MockInterviewSetupPage() {
 
     </div>
   )
+}
+export default function MockInterviewSetupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ background: "var(--ghost)" }}
+        >
+          Loading...
+        </div>
+      }
+    >
+      <MockInterviewSetupContent />
+    </Suspense>
+  );
 }

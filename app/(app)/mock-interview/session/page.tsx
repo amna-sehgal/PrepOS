@@ -284,8 +284,8 @@ export default function MockInterviewSessionPage() {
       ? data.hint.trim()
       : fallbackHint
 
-    setCurrentHint(hintText)
-    setShowHint(Boolean(hintText) && config?.hints !== false)
+setCurrentHint(hintText)
+setShowHint(false)
 
     setMessages((m) => [
       ...m,
@@ -324,6 +324,7 @@ export default function MockInterviewSessionPage() {
     }
 
     setTimeout(() => {
+      setShowHint(false)
       setMessages((m) => [
         ...m,
         {
@@ -377,10 +378,6 @@ export default function MockInterviewSessionPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 font-mono-frag text-[12px]"
-            style={{ color: 'rgba(26,16,53,0.45)' }}>
-            <Clock size={12} strokeWidth={1.8} />{formatCountdown(timeRemaining)}
-          </span>
           <span className="inline-flex items-center gap-1.5 font-mono-frag text-[12px]"
             style={{ color: timeRemaining <= 60 ? 'var(--coral)' : 'rgba(26,16,53,0.45)' }}>
             <Clock size={12} strokeWidth={1.8} />{formatCountdown(timeRemaining)} left

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, cubicBezier, AnimatePresence } from 'framer-motion'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
   Mic2, Target, Gauge, Layers, Building2,
@@ -82,6 +82,12 @@ const previewSteps = [
 
 export default function MockInterviewSetupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [roadmapLoading, setRoadmapLoading] = useState(false)
+  const [roadmapTopics, setRoadmapTopics] = useState<string[]>([])
+  const roadmapMode = searchParams.get('mode') === 'roadmap'
+  const roadmapId = searchParams.get('roadmapId')
+  const roadmapWeek = Number(searchParams.get('week'))
   const [role, setRole] = useState('SDE Intern')
   const [difficulty, setDifficulty] = useState('Intermediate')
   const [type, setType] = useState('DSA')
@@ -106,6 +112,48 @@ export default function MockInterviewSetupPage() {
 
     fetchCompanies()
   }, [])
+
+  useEffect(() => {
+    if (!roadmapMode || !roadmapId) return
+
+    const loadRoadmapInterview = async () => {
+      setRoadmapLoading(true)
+
+      const { data, error } = await supabase
+        .from('prep_roadmaps')
+        .select('*')
+        .eq('id', roadmapId)
+        .single()
+
+      if (error || !data) {
+        console.error(error)
+        setRoadmapLoading(false)
+        return
+      }
+
+      const currentWeek = data.roadmap.find(
+        (w: any) => w.week === roadmapWeek
+      )
+
+      if (!currentWeek) {
+        setRoadmapLoading(false)
+        return
+      }
+
+      setRole(data.role)
+      setCompany(data.companies?.[0] || "")
+
+      setRoadmapTopics(
+        currentWeek.topics.map((t: any) => t.label)
+      )
+
+      setRoadmapLoading(false)
+    }
+
+    // Call the function HERE, outside its definition
+    loadRoadmapInterview()
+
+  }, [roadmapMode, roadmapId, roadmapWeek])
   // Animate preview steps in sequence
   useEffect(() => {
     if (visibleSteps >= previewSteps.length) return
@@ -115,8 +163,19 @@ export default function MockInterviewSetupPage() {
   }, [visibleSteps])
 
   const handleStart = async () => {
-    const config = { role, difficulty, type, company, hints: true }
+    const config = {
+      role,
+      difficulty,
+      type,
+      company,
+      hints: true,
+      roadmapTopics
+    }
 
+    console.log("Roadmap mode:", roadmapMode)
+    console.log("Roadmap ID:", roadmapId)
+    console.log("Roadmap topics:", roadmapTopics)
+    console.log(config)
     try {
       const result = await startMockInterview(config)
 

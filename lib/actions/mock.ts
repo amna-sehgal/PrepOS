@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { askOpenRouter } from '@/lib/gemini/client'
 import { generateFirstQuestionPrompt } from '@/lib/gemini/prompts'
+import { getQuestionLimit } from "@/lib/mock/questionBank";
 
 type StartMockInput = {
   role: string
@@ -10,6 +11,10 @@ type StartMockInput = {
   type: string
   company?: string
   hints: boolean
+
+  roadmapMode?: boolean
+  roadmapWeek?: number
+  roadmapTopics?: string[]
 }
 
 function getQCount(difficulty: string) {
@@ -31,14 +36,48 @@ export async function startMockInterview(input: StartMockInput) {
   }
 
   const totalQuestions = getQCount(input.difficulty)
+  const { data: history } = await supabase
+    .from('question_history')
+    .select('question_text')
+    .eq('user_id', user.id)
+    .eq('role', input.role)
+    .eq('interview_type', input.type)
+    .eq('difficulty', input.difficulty)
+    .eq('company', input.company || null)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const previousQuestions =
+    (history ?? [])
+      .reverse()
+      .map((q) => q.question_text)
+
+  const attemptedQuestions = history?.length ?? 0;
+
+  const questionLimit = getQuestionLimit(
+    input.company,
+    input.difficulty
+  );
+
+  const levelCompleted =
+    attemptedQuestions >= questionLimit;
 
   const firstQuestion = await askOpenRouter(
-    generateFirstQuestionPrompt({
-      role: input.role,
-      difficulty: input.difficulty,
-      type: input.type,
-      company: input.company,
-    })
+    generateFirstQuestionPrompt(
+      {
+        role: input.role,
+        difficulty: input.difficulty,
+        type: input.type,
+        company: input.company,
+        
+
+        roadmapTopics: input.roadmapTopics,
+        roadmapWeek: input.roadmapWeek,
+        roadmapMode: input.roadmapMode
+      },
+      previousQuestions,
+      levelCompleted
+    )
   )
 
   const transcript = [
@@ -67,6 +106,16 @@ export async function startMockInterview(input: StartMockInput) {
   if (error) {
     throw new Error(error.message)
   }
+  await supabase.from('question_history').insert({
+    user_id: user.id,
+    session_id: data.id,
+    company: input.company || null,
+    role: input.role,
+    interview_type: input.type,
+    difficulty: input.difficulty,
+    question_text: firstQuestion,
+    question_hash: firstQuestion.trim().toLowerCase(),
+  })
 
   return {
     sessionId: data.id,

@@ -33,8 +33,8 @@ export async function GET(
       )
     }
 
-    const summary = (data.transcript || []).length > 0 && data.transcript[data.transcript.length - 1].isSummary 
-      ? data.transcript[data.transcript.length - 1] 
+    const summary = (data.transcript || []).length > 0 && data.transcript[data.transcript.length - 1].isSummary
+      ? data.transcript[data.transcript.length - 1]
       : null;
 
     return NextResponse.json({
@@ -44,11 +44,13 @@ export async function GET(
       interview_type: data.interview_type,
       company: data.company,
       hints: data.hints,
+      elapsed: data.elapsed,
+
       totalQuestions: data.total_questions,
       firstQuestion: data.transcript?.[0]?.text || null,
 
-      // NEW: full interview data
       transcript: data.transcript || [],
+
       score: summary?.score || 0,
       correct: summary?.correct || 0,
       partial: summary?.partial || 0,
@@ -57,6 +59,10 @@ export async function GET(
       weakAreas: summary?.weakAreas || [],
       reviseTopics: summary?.reviseTopics || [],
       completedAt: summary?.completedAt || null,
+
+      // NEW
+      levelCompleted: data.level_completed,
+      recommendedDifficulty: data.recommended_difficulty,
     })
   } catch (err: any) {
     return NextResponse.json(

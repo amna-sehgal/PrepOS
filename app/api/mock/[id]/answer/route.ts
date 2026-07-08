@@ -5,6 +5,8 @@ import {
   generateNextQuestionPrompt,
 } from '@/lib/gemini/prompts'
 import { NextResponse } from 'next/server'
+import { getQuestionLimit } from "@/lib/mock/questionBank";
+
 
 function getFallbackHint(status: string) {
   switch (status) {
@@ -94,6 +96,13 @@ export async function POST(
     try {
       const cleanJson = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim()
       parsed = JSON.parse(cleanJson)
+      parsed.score = Number(parsed.score)
+
+      if (Number.isNaN(parsed.score)) {
+        parsed.score = 40
+      }
+
+      parsed.score = Math.max(0, Math.min(100, parsed.score))
     } catch {
       console.log('RAW AI RESPONSE:', aiResponse)
 
@@ -138,10 +147,28 @@ export async function POST(
     if (questionIndex + 1 >= session.total_questions) {
       finished = true
     } else {
-      const previousQuestions = transcript
+      const currentSessionQuestions = transcript
         .filter((t: any) => t.role === 'ai' && !t.feedback)
         .map((t: any) => t.text)
 
+      const { data: history } = await supabase
+        .from('question_history')
+        .select('question_text')
+        .eq('user_id', user.id)
+        .eq('role', session.role)
+        .eq('interview_type', session.interview_type)
+        .eq('difficulty', session.difficulty)
+        .eq('company', session.company)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      const historicalQuestions =
+        history?.map((q) => q.question_text) ?? []
+      const allPreviousQuestions = [
+        ...new Set([
+          ...historicalQuestions,
+          ...currentSessionQuestions,
+        ]),
+      ]
       const nextPrompt = generateNextQuestionPrompt(
         {
           role: session.role,
@@ -149,11 +176,23 @@ export async function POST(
           type: session.interview_type,
           company: session.company,
         },
-        previousQuestions
+        allPreviousQuestions
       )
 
       try {
         nextQuestion = await askOpenRouter(nextPrompt)
+        if (nextQuestion) {
+          await supabase.from('question_history').insert({
+            user_id: user.id,
+            session_id: session.id,
+            company: session.company,
+            role: session.role,
+            interview_type: session.interview_type,
+            difficulty: session.difficulty,
+            question_text: nextQuestion,
+            question_hash: nextQuestion.trim().toLowerCase(),
+          })
+        }
       } catch (err: any) {
         console.error('Failed fetching next question:', err)
         nextQuestion = "Let's move on to the next topic. Could you share more about your experience?"
@@ -226,6 +265,7 @@ ${JSON.stringify(
       )}
 `
 
+
       try {
         const reportAi = await askOpenRouter(reportPrompt)
 
@@ -250,6 +290,31 @@ ${JSON.stringify(
         reviseTopics: reportInfo?.reviseTopics || [],
         completedAt: new Date().toISOString(),
       })
+
+      const { count } = await supabase
+        .from("question_history")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("role", session.role)
+        .eq("interview_type", session.interview_type)
+        .eq("difficulty", session.difficulty)
+        .eq("company", session.company);
+
+      const questionLimit = getQuestionLimit(
+        session.company,
+        session.difficulty
+      );
+
+      const levelCompleted = (count ?? 0) >= questionLimit;
+
+      let recommendedDifficulty: string | null = null;
+
+      if (levelCompleted) {
+        if (session.difficulty === "Beginner")
+          recommendedDifficulty = "Intermediate";
+        else if (session.difficulty === "Intermediate")
+          recommendedDifficulty = "Advanced";
+      }
       const startedAt = session.created_at ? new Date(session.created_at).getTime() : Date.now()
       const endedAt = Date.now()
 
@@ -284,6 +349,9 @@ ${JSON.stringify(
         weakAreas: reportInfo?.weakAreas || [],
         reviseTopics: reportInfo?.reviseTopics || [],
       }
+      updatePayload.level_completed = levelCompleted
+
+      updatePayload.recommended_difficulty = recommendedDifficulty;
     }
 
     const { error: updateError } = await supabase

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { askOpenRouter } from '@/lib/gemini/client'
 import { NextResponse } from 'next/server'
+import { QUESTION_BANK } from '@/lib/mock/questionBank'
 
 export async function POST(
   req: Request,
@@ -73,11 +74,11 @@ Return ONLY valid JSON:
 
 Transcript:
 ${JSON.stringify(
-  transcript.map((t: any) => ({
-    role: t.role,
-    text: t.text,
-  }))
-)}
+      transcript.map((t: any) => ({
+        role: t.role,
+        text: t.text,
+      }))
+    )}
 `
 
     try {
@@ -112,7 +113,44 @@ ${JSON.stringify(
     const endedAt = Date.now()
     const elapsedSeconds = Math.floor((endedAt - startedAt) / 1000)
 
+    const { data: history } = await supabase
+      .from('question_history')
+      .select('question_hash')
+      .eq('user_id', user.id)
+      .eq('role', session.role)
+      .eq('interview_type', session.interview_type)
+      .eq('difficulty', session.difficulty)
+      .eq('company', session.company)
+
+    const uniqueQuestions = new Set(
+      (history ?? []).map((q) => q.question_hash)
+    ).size
+
+    const companyKey =
+      (session.company && session.company in QUESTION_BANK
+        ? session.company
+        : 'General') as keyof typeof QUESTION_BANK
+
+    const difficultyKey =
+      session.difficulty as keyof (typeof QUESTION_BANK)['General']
+
+    const totalAvailable =
+      QUESTION_BANK[companyKey][difficultyKey] ?? 25
+
+    const levelCompleted = uniqueQuestions >= totalAvailable
+
+    let recommendedDifficulty: string | null = null
+
+    if (levelCompleted) {
+      if (session.difficulty === 'Beginner')
+        recommendedDifficulty = 'Intermediate'
+      else if (session.difficulty === 'Intermediate')
+        recommendedDifficulty = 'Advanced'
+    }
+
     const updatePayload: any = {
+      level_completed: levelCompleted,
+      recommended_difficulty: recommendedDifficulty,
       transcript: updatedTranscript,
       elapsed: elapsedSeconds,
       status: 'completed',

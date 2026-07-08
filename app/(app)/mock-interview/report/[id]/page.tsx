@@ -28,7 +28,8 @@ type Config = {
   role: string; difficulty: string; type: string; company: string; hints: boolean
 }
 type ReportData = {
-  config: Config; elapsed: number; feedbacks: Feedback[]; completedAt: string;
+  config: Config; elapsed: number; feedbacks: Feedback[]; completedAt: string; levelCompleted: boolean
+  recommendedDifficulty?: string
   weakAreas?: string[]; reviseTopics?: string[]
 }
 
@@ -86,9 +87,12 @@ export default function MockInterviewReportPage() {
             company: data.company,
             hints: data.hints,
           },
+
           elapsed: data.elapsed || 0,
 
-          // convert transcript → feedbacks
+          levelCompleted: data.levelCompleted,
+          recommendedDifficulty: data.recommendedDifficulty,
+
           feedbacks: (() => {
             const result: any[] = []
 
@@ -116,7 +120,6 @@ export default function MockInterviewReportPage() {
           weakAreas: data.weakAreas,
           reviseTopics: data.reviseTopics,
         }
-
         setData(formatted)
       } catch (err) {
         console.error('Failed to load report:', err)
@@ -235,6 +238,106 @@ export default function MockInterviewReportPage() {
                 </div>
               </div>
             </div>
+
+            {data.levelCompleted && (
+              <motion.div
+                variants={fadeUp}
+                className="rounded-2xl px-6 py-5 mb-5 relative overflow-hidden"
+                style={{ background: "var(--void)" }}
+              >
+                <div
+                  className="absolute top-0 right-0 w-44 h-44 opacity-[0.08] blur-3xl pointer-events-none"
+                  style={{ background: "var(--teal)" }}
+                />
+
+                <div className="relative z-10 flex items-start justify-between gap-5 flex-wrap">
+                  <div className="flex-1 min-w-[260px]">
+                    <div
+                      className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full"
+                      style={{
+                        background: "rgba(29,158,117,0.12)",
+                        border: "1px solid rgba(29,158,117,0.22)",
+                      }}
+                    >
+                      <Trophy
+                        size={11}
+                        strokeWidth={1.8}
+                        style={{ color: "var(--teal)" }}
+                      />
+                      <span
+                        className="font-mono-frag text-[10px] tracking-[0.1em]"
+                        style={{ color: "var(--teal)" }}
+                      >
+                        LEVEL COMPLETED
+                      </span>
+                    </div>
+
+                    <h3
+                      className="font-black text-[26px] leading-tight tracking-[-0.02em] mb-2"
+                      style={{
+                        fontFamily: "var(--font-archivo)",
+                        color: "var(--snow)",
+                      }}
+                    >
+                      🎉 {data.config.difficulty} Complete
+                    </h3>
+
+                    <p
+                      className="text-[14px] leading-relaxed max-w-xl"
+                      style={{ color: "rgba(238,237,254,0.62)" }}
+                    >
+                      You've completed nearly every unique{" "}
+                      <strong>{data.config.company || "General"}</strong>{" "}
+                      <strong>{data.config.type}</strong> interview question available for
+                      the <strong>{data.config.difficulty}</strong> level.
+                    </p>
+
+                    <p
+                      className="text-[13px] mt-3"
+                      style={{ color: "rgba(238,237,254,0.45)" }}
+                    >
+                      Future sessions may include fresh AI-generated variations, but we
+                      recommend moving to{" "}
+                      <span style={{ color: "var(--teal)", fontWeight: 700 }}>
+                        {data.recommendedDifficulty}
+                      </span>{" "}
+                      for a more meaningful challenge.
+                    </p>
+                  </div>
+
+                  <div
+                    className="rounded-2xl px-5 py-4 flex flex-col items-center justify-center min-w-[140px]"
+                    style={{
+                      background: "rgba(238,237,254,0.05)",
+                      border: "1px solid rgba(238,237,254,0.08)",
+                    }}
+                  >
+                    <Trophy
+                      size={30}
+                      strokeWidth={1.8}
+                      style={{ color: "var(--teal)" }}
+                    />
+
+                    <span
+                      className="font-black text-[30px] mt-2"
+                      style={{
+                        fontFamily: "var(--font-archivo)",
+                        color: "var(--snow)",
+                      }}
+                    >
+                      ✓
+                    </span>
+
+                    <span
+                      className="text-[11px] mt-1"
+                      style={{ color: "rgba(238,237,254,0.45)" }}
+                    >
+                      Achievement Unlocked
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Breakdown */}
             <div className="flex gap-3">

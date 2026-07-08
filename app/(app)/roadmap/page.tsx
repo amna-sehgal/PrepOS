@@ -13,6 +13,8 @@ import { generateAIRoadmap } from '@/lib/actions/roadmap'
 import RoadmapHistory from '@/components/RoadmapHistory'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from "next/navigation"
+import { startMockInterview } from "@/lib/actions/mock"
 
 const supabase = createClient()
 
@@ -533,8 +535,22 @@ function SetupScreen({ onGenerate }: { onGenerate: (c: RoadmapConfig) => void })
 }
 
 // ── Week card ──────────────────────────────────────────
-function WeekCard({ week, index, onToggleTopic }: {
-  week: Week; index: number; onToggleTopic: (weekNum: number, topicId: string) => void
+function WeekCard({
+  week,
+  index,
+  onToggleTopic,
+  roadmapId,
+  role,
+  companies,
+  onStartMock
+}: {
+  week: Week
+  index: number
+  onToggleTopic: (weekNum: number, topicId: string) => void
+  roadmapId?: string
+  role: string
+  companies: string[]
+  onStartMock: (week: Week) => void
 }) {
   const [expanded, setExpanded] = useState(index === 0)
   const done = week.topics.filter(t => t.done).length
@@ -710,36 +726,37 @@ function WeekCard({ week, index, onToggleTopic }: {
                           </p>
                         </div>
                       </div>
-                      <Link
-                        href={`/mock-interview?type=${encodeURIComponent(
-                          week.mockInterview.type
-                        )}&role=${encodeURIComponent(
-                          week.mockInterview.role
-                        )}&week=${week.week}`}
-                        className="no-underline"
+                      <motion.button
+                        whileHover={{ scale: 1.05, x: 2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onStartMock(week)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg cursor-pointer"
+                        style={{
+                          background: 'var(--brand)',
+                          color: 'var(--mist)',
+                          fontFamily: 'var(--font-archivo)'
+                        }}
                       >
-                        <motion.div whileHover={{ scale: 1.05, x: 2 }} whileTap={{ scale: 0.95 }}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg cursor-pointer"
-                          style={{ background: 'var(--brand)', color: 'var(--mist)', fontFamily: 'var(--font-archivo)' }}>
-                          Start <Play size={10} strokeWidth={2.5} />
-                        </motion.div>
-                      </Link>
+                        Start
+                        <Play size={10} />
+                      </motion.button>
                     </div>
                   )}
-                </div>
+              </div>
               </motion.div>
             )}
-          </AnimatePresence>
-        </motion.div>
-      </div>
+      </AnimatePresence>
     </motion.div>
+      </div >
+    </motion.div >
   )
 }
+
 
 // ── Roadmap view ───────────────────────────────────────
 function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () => void }) {
   const [weeks, setWeeks] = useState<Week[]>(config.roadmap || [])
-
+  const router = useRouter()
   const toggleTopic = async (weekNum: number, topicId: string) => {
     const updatedWeeks = weeks.map(w =>
       w.week === weekNum
@@ -772,6 +789,34 @@ function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () =
   const readiness = Math.round((doneTopics / totalTopics) * 100)
   const currentWeek = weeks.findIndex(w => w.topics.some(t => !t.done)) + 1 || weeks.length
   const animReadiness = useCountUp(readiness, 400)
+  const handleRoadmapMock = async (week: Week) => {
+    try {
+      const result = await startMockInterview({
+        role: config.role,
+        company: config.companies[0] || "",
+        type: week.mockInterview?.type || "Mixed",
+
+        // roadmap interviews no longer use a fixed difficulty
+        difficulty: "Roadmap",
+
+        hints: true,
+
+        roadmapMode: true,
+        roadmapWeek: week.week,
+        roadmapTopics: week.topics.map(t => t.label),
+      })
+
+      localStorage.setItem(
+        "prepos_session_id",
+        result.sessionId
+      )
+
+      router.push("/mock-interview/session")
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
 
   return (
     <div className="max-w-2xl mx-auto px-5 md:px-0 py-8">
@@ -885,7 +930,16 @@ function RoadmapView({ config, onReset }: { config: RoadmapConfig; onReset: () =
       {/* Week timeline */}
       <div className="flex flex-col gap-4">
         {weeks.map((week, i) => (
-          <WeekCard key={week.week} week={week} index={i} onToggleTopic={toggleTopic} />
+          <WeekCard
+            key={week.week}
+            week={week}
+            index={i}
+            onToggleTopic={toggleTopic}
+            roadmapId={config.id}
+            role={config.role}
+            companies={config.companies}
+            onStartMock={handleRoadmapMock}
+          />
         ))}
       </div>
 

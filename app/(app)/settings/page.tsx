@@ -21,8 +21,7 @@ const stagger = {
 }
 
 // ── Data ───────────────────────────────────────────────
-const colleges = ['IIT Bombay', 'IIT Delhi', 'IIT Madras', 'BITS Pilani', 'NIT Trichy', 'VIT Vellore', 'IIIT Hyderabad', 'DTU', 'NSUT', 'Other']
-const years = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Final Year', 'Graduate']
+const years = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate']
 const roles = ['SDE Intern', 'SDE-1', 'Data Analyst', 'Product Manager', 'ML Engineer', 'Frontend Dev', 'Backend Dev', 'DevOps']
 const companies = ['Google', 'Amazon', 'Flipkart', 'Razorpay', 'Atlassian', 'Microsoft', 'Adobe', 'Swiggy', 'CRED', 'PhonePe', 'Meesho', 'Zepto']
 
@@ -288,6 +287,7 @@ export default function SettingsPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [college, setCollege] = useState('')
+  const [customCollege, setCustomCollege] = useState('')
   const [year, setYear] = useState('')
   useEffect(() => {
     const fetchUser = async () => {
@@ -439,7 +439,11 @@ export default function SettingsPage() {
                   <Input value={email} onChange={setEmail} placeholder="you@college.ac.in" type="email" disabled />
                 </Field>
                 <Field label="College">
-                  <Select value={college} onChange={setCollege} options={colleges} />
+                  <Input
+                    value={college}
+                    onChange={setCollege}
+                    placeholder="enter your college name"
+                  />
                 </Field>
                 <Field label="Year">
                   <Select value={year} onChange={setYear} options={years} />

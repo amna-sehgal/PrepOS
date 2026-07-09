@@ -4,6 +4,13 @@ import Link from 'next/link'
 import { Reveal, SlideIn, StaggerReveal, staggerItem, ScalePop } from '../motion'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
+import FeedbackModal from "@/components/landing/FeedbackModal";
+import {
+  ArrowRight,
+  Sparkles,
+  ChevronRight,
+  MessageSquare,
+} from 'lucide-react'
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 const features = [
@@ -117,7 +124,7 @@ const tiers = [
   { label: 'T1', name: 'FAANG + Dream', cos: 'Google · Microsoft · Amazon', badge: 'bg-[#534AB7] text-[#EEEDFE]' },
   { label: 'T2', name: 'Top Indian product', cos: 'Razorpay · Groww · Flipkart', badge: 'bg-[#3C3489] text-[#AFA9EC]' },
   { label: 'T3', name: 'Service + mass hiring', cos: 'TCS · Infosys · Wipro', badge: 'bg-white/[0.08] text-[#AFA9EC]/70' },
-  { label: 'S',  name: 'Funded startups', cos: 'Any Series A/B startup', badge: 'bg-[#1D9E75]/20 text-[#5DCAA5]' },
+  { label: 'S', name: 'Funded startups', cos: 'Any Series A/B startup', badge: 'bg-[#1D9E75]/20 text-[#5DCAA5]' },
 ]
 
 export function IndiaSection() {
@@ -142,7 +149,7 @@ export function IndiaSection() {
               style={{ width: '20px', height: '1.5px', backgroundColor: '#AFA9EC' }}
             />
             <p className="font-mono-frag text-[11px] tracking-[0.1em] uppercase"
-               style={{ color: '#AFA9EC' }}>
+              style={{ color: '#AFA9EC' }}>
               Built for India
             </p>
           </div>
@@ -324,45 +331,45 @@ const steps = [
     accentBg: 'bg-lavender/8',
   },
 ]
- 
+
 export function HowItWorks() {
   const ref = useRef(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [mounted, setMounted] = useState(false)
- 
+
   useEffect(() => {
     setMounted(true)
   }, [])
- 
+
   useEffect(() => {
     if (!mounted) return
- 
+
     const handleScroll = () => {
       const stepElements = document.querySelectorAll('[data-step]')
       let closestIndex = 0
       let closestDistance = Infinity
- 
+
       stepElements.forEach((el, index) => {
         const rect = el.getBoundingClientRect()
         const elementCenter = rect.top + rect.height / 2
         const viewportCenter = window.innerHeight / 2
         const distance = Math.abs(elementCenter - viewportCenter)
- 
+
         if (distance < closestDistance) {
           closestDistance = distance
           closestIndex = index
         }
       })
- 
+
       setActiveIndex(closestIndex)
     }
- 
+
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll() // Call once on mount
- 
+
     return () => window.removeEventListener('scroll', handleScroll)
   }, [mounted])
- 
+
   return (
     <section id="how-it-works" className="py-20 px-6 md:px-12 max-w-4xl mx-auto">
       <Reveal>
@@ -373,15 +380,15 @@ export function HowItWorks() {
           How PrepOS works
         </h2>
       </Reveal>
- 
+
       <div ref={ref} className="relative">
         {/* Static vertical line */}
         <div className="absolute left-6 top-0 bottom-0 w-px bg-void/8" />
- 
+
         <div className="flex flex-col gap-8">
           {steps.map((step, i) => {
             const isActive = i === activeIndex
- 
+
             return (
               <motion.div
                 key={step.num}
@@ -397,23 +404,23 @@ export function HowItWorks() {
                   animate={{
                     backgroundColor: isActive ? '#534AB7' : '#E8E6F5',
                     color: isActive ? '#F7F6FD' : '#534AB7',
-                    boxShadow: isActive 
-                      ? '0 0 0 8px rgba(83,74,183,0.15)' 
+                    boxShadow: isActive
+                      ? '0 0 0 8px rgba(83,74,183,0.15)'
                       : '0 0 0 0px rgba(83,74,183,0)',
                   }}
                   transition={{ duration: 0.35, ease: 'easeInOut' }}
                 >
                   {step.num}
                 </motion.div>
- 
+
                 {/* Card */}
                 <motion.div
                   className="flex-1 rounded-2xl border overflow-hidden"
                   animate={{
                     backgroundColor: isActive ? 'rgba(245,242,255,0.95)' : 'rgba(248,247,252,0.6)',
                     borderColor: isActive ? 'rgba(83,74,183,0.35)' : 'rgba(0,0,0,0.08)',
-                    boxShadow: isActive 
-                      ? '0 8px 24px rgba(83,74,183,0.15)' 
+                    boxShadow: isActive
+                      ? '0 8px 24px rgba(83,74,183,0.15)'
                       : '0 0px 0px rgba(83,74,183,0)',
                     y: isActive ? -4 : 0,
                   }}
@@ -436,7 +443,7 @@ export function HowItWorks() {
                         {step.tag}
                       </motion.span>
                     </div>
- 
+
                     {/* Content */}
                     <h3 className="font-archivo font-black text-[17px] text-void mb-2 tracking-[-0.01em]">
                       {step.title}
@@ -456,6 +463,7 @@ export function HowItWorks() {
 }
 // ─── CTA Footer ───────────────────────────────────────────────────────────────
 export function CTAFooter() {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   return (
     <>
       {/* DARK CTA SECTION */}
@@ -517,22 +525,41 @@ export function CTAFooter() {
       </div>
 
       {/* FOOTER BAR */}
-      <div className="bg-[#0B071A] px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-2">
+      <div className="bg-[#0B071A] px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-4">
 
         <span className="font-archivo font-black text-[15px] text-[#F5F2FF]">
           PrepOS
         </span>
 
-        {/* FIX 3: remove muted look */}
-        <span className="font-familjen text-[12px] text-[#F5F2FF] opacity-90">
+        <span className="font-familjen text-[12px] text-[#F5F2FF] opacity-90 text-center">
           Built for every college student in India.
         </span>
 
-        <span className="font-familjen text-[12px] text-[#AFA9EC] opacity-100">
-          Created by Amna ✨
-        </span>
+        <div className="flex items-center gap-5">
+
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="flex items-center gap-2 text-[12px] transition-all hover:opacity-100 opacity-80"
+            style={{
+              color: "#C8C3FF",
+            }}
+          >
+            <MessageSquare size={14} />
+            Feedback
+          </button>
+
+          <span className="font-familjen text-[12px] text-[#AFA9EC]">
+            Created by Amna ✨
+          </span>
+
+        </div>
 
       </div>
+
+      <FeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </>
   )
 }

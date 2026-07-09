@@ -171,48 +171,6 @@ export function IndiaSection() {
             Not every student is from IIT. PrepOS understands the tier 2/3 college student targeting
             Razorpay, not Google — and calibrates everything from prep intensity to company patterns accordingly.
           </p>
-
-          {/* CTA */}
-          <motion.div
-            whileHover={{ scale: 1.03, y: -1 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="inline-flex"
-          >
-            <Link
-              href="/auth/signup"
-              className="no-underline inline-flex items-center gap-2 font-archivo font-bold text-[13px] rounded-full"
-              style={{
-                color: '#F7F6FD',
-                backgroundColor: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                paddingLeft: '20px',
-                paddingRight: '14px',
-                paddingTop: '10px',
-                paddingBottom: '10px',
-                letterSpacing: '-0.01em',
-                transition: 'background 0.18s, border-color 0.18s',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.backgroundColor = 'rgba(175,169,236,0.15)'
-                el.style.borderColor = 'rgba(175,169,236,0.3)'
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.backgroundColor = 'rgba(255,255,255,0.07)'
-                el.style.borderColor = 'rgba(255,255,255,0.12)'
-              }}
-            >
-              See company tiers
-              <span
-                className="inline-flex items-center justify-center rounded-full text-[10px]"
-                style={{ width: '18px', height: '18px', backgroundColor: 'rgba(175,169,236,0.15)', color: '#AFA9EC' }}
-              >
-                →
-              </span>
-            </Link>
-          </motion.div>
         </motion.div>
 
         {/* Right: Tier cards */}

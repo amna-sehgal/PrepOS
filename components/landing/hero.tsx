@@ -99,7 +99,7 @@ export default function Hero() {
           className="font-familjen text-[17px] leading-relaxed max-w-[560px] mb-9"
           style={{ color: 'rgba(26,16,53,0.5)' }}
         >
-          From brainstorming project ideas to cracking your Razorpay interview —
+          From brainstorming project ideas to cracking your Razorpay interview, 
           PrepOS is the guided system that takes you all the way.
         </motion.p>
 

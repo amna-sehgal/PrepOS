@@ -37,16 +37,25 @@ export default function TopNavbar() {
   const unreadCount = notifications.filter(n => !n.is_read).length
   useEffect(() => {
     const loadUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-      const user = session?.user
       if (user) {
-        setUserName(user.user_metadata.full_name || '')
-        setCollegeName(user.user_metadata.college_name || '')
+        setUserName(user.user_metadata?.full_name || '')
+        setCollegeName(user.user_metadata?.college_name || '')
       }
     }
 
     loadUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadUser()
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
   useEffect(() => {
     const channel = supabase

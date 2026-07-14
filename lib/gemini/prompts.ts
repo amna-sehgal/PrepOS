@@ -161,27 +161,60 @@ export function evaluateAnswerPrompt(
   return `
   STATUS RULES:
 
-correct:
-score >= 75
 
-partial:
-score between 40 and 74
+correct
+The candidate answered the primary question correctly.
+Minor missing details are acceptable.
 
-incorrect:
-score below 40
+partial
+The candidate showed some understanding but missed important concepts or reasoning.
 
-Status MUST match the score.
-Never contradict the score.
-You are a STRICT FAANG interview evaluator.
+incorrect
+The answer is fundamentally incorrect, unrelated, or demonstrates little understanding.
 
-Your grading standard must remain consistent across all interviews.
+STATUS DETERMINATION (MANDATORY)
 
-The same quality of answer should receive approximately the same score regardless of the company or interview.
+After calculating the Final Score:
 
-You do NOT be friendly. You do NOT be lenient.
-You grade like an Amazon/Google interviewer.
+80–100 → correct
+40–79 → partial
+0–39 → incorrect
+
+The status MUST be determined ONLY from the final score.
+Do not choose the status independently.
+You are an experienced software engineering interviewer evaluating a mock interview.
+
+Your goal is to provide a realistic assessment that mirrors how professional interviewers evaluate candidates.
+
+Be objective, fair, and consistent.
+
+Do not inflate scores, but do not over-penalize candidates for small omissions.
+
+Focus primarily on:
+- correctness
+- reasoning
+- communication
+- problem-solving approach
+- clarity
+
+Evaluate whether the candidate would likely pass this interview stage, rather than treating it like an academic exam.
 
 ---
+
+INTERVIEW CONTEXT:
+
+Role: ${config.role}
+Difficulty: ${config.difficulty}
+Interview Type: ${config.type}
+Company: ${config.company || "General"}
+
+---
+
+Evaluation Guidance:
+
+- If this is a DSA interview, prioritize correctness, algorithm choice, time and space complexity, and communication.
+- If this is a Behavioral interview, prioritize clarity, ownership, impact, structure (such as STAR), and reflection.
+- If this is a System Design interview, prioritize requirements gathering, architecture, scalability, trade-offs, and communication.
 
 QUESTION:
 ${question}
@@ -195,31 +228,90 @@ EVALUATION RULES:
 
 Score honestly using this rubric:
 
-90–100:
-- Excellent structure (STAR method or equivalent)
-- Specific technical details
-- Clear real-world impact or depth
-- Strong communication
+95–100
+Exceptional answer.
+Technically accurate, well structured, clear reasoning, strong examples, and interview-ready.
 
-75–89:
-- Good answer
-- Some specificity missing OR weak depth
-- Still correct and structured
+85–94
+Strong answer.
+Correct with good communication. May miss a few details but would likely pass.
 
-60–74:
-- Basic answer
-- Generic explanations
-- Missing technical depth
+70–84
+Good answer.
+Correct overall but lacks some depth, examples, or optimization.
 
-40–59:
-- Weak understanding
-- Vague or incomplete
+55–69
+Partially correct.
+Shows understanding but misses important concepts or contains noticeable gaps.
 
-0–20
-No answer, "I don't know", or completely unrelated response.
+35–54
+Weak answer.
+Incomplete, vague, or contains significant misunderstandings.
 
-21–39
-Major misconceptions or mostly incorrect answer.
+0–34
+Incorrect, unrelated, or no meaningful answer.
+
+SCORING PROCESS (FOLLOW EXACTLY)
+
+Step 1: Evaluate the answer on each criterion from 0 to 5.
+
+Correctness
+0 = incorrect or unrelated
+1 = major misconceptions
+2 = partially correct
+3 = mostly correct
+4 = correct with minor gaps
+5 = completely correct
+
+Specificity
+0 = no examples
+1 = extremely vague
+2 = some details
+3 = reasonably specific
+4 = detailed
+5 = highly specific with concrete examples
+
+Depth
+0 = superficial
+1 = very little reasoning
+2 = basic reasoning
+3 = good reasoning
+4 = strong reasoning
+5 = exceptional insight
+
+Structure & Communication
+0 = confusing
+1 = poorly structured
+2 = understandable
+3 = organized
+4 = clear
+5 = exceptionally clear
+
+Impact / Outcome
+0 = no outcome
+1 = vague outcome
+2 = weak outcome
+3 = reasonable outcome
+4 = strong outcome
+5 = measurable or highly convincing outcome
+
+Step 2:
+
+Total = sum of all five scores.
+
+Final Score = Total × 4.
+
+Step 3:
+
+Determine status ONLY using the final score.
+
+80–100 → correct
+40–79 → partial
+0–39 → incorrect
+
+Do NOT estimate the score directly.
+
+Always score each criterion first, then calculate the final score.
 
 ---
 
@@ -231,10 +323,7 @@ Never give a score of 0 unless:
 - says "I don't know",
 - or the answer is completely unrelated.
 
-Weak answers should normally score between 20 and 45.
-Average answers should score between 50 and 70.
-Good answers should score between 75 and 90.
-Outstanding answers should score between 90 and 100.
+
 ALWAYS generate a hint.
 
 The hint must:
@@ -245,20 +334,43 @@ The hint must:
   - correct → optimization hint
   - partial → missing concept hint
   - incorrect → direction hint
-- Be strict, not generous
+- Be honest, objective, and balanced.
+
+-Avoid being unnecessarily harsh or overly generous.
+
+-Your evaluation should reflect how an experienced interviewer would assess the response.
 - Do NOT default to 80–90
 - Avoid rounding to nice numbers
 - Scores must reflect real quality gaps
 
 ---
+FEEDBACK RULES
+
+The feedback should:
+
+- Start with what the candidate did well.
+- Clearly explain what was missing.
+- Mention one concrete improvement.
+- Be encouraging but honest.
+- Avoid generic statements.
+- Keep it between 3 and 5 concise sentences.
+
+Also identify:
+
+- 2 strengths of the candidate's answer.
+- 2 specific improvements that would make the answer stronger.
+
+The strengths and improvements should be concise (one sentence each) and directly related to the answer.
 
 Return ONLY valid JSON:
 
 {
-  "feedback": "2-4 lines of honest critique",
-  "score": number,
-  "status": "correct | partial | incorrect",
-  "hint": "a short, specific hint that helps improve this exact answer"
+  "feedback": "<string>",
+  "score": "<integer>",
+  "status": "<correct|partial|incorrect>",
+  "hint": "<string>",
+  "strengths": ["<string>", "<string>"],
+  "improvements": ["<string>", "<string>"]
 }
 `
 }

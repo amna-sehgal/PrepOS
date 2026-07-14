@@ -13,6 +13,7 @@ import {
     Send,
     CheckCircle2,
 } from 'lucide-react'
+import { Rocket } from "lucide-react";
 
 type Props = {
     open: boolean
@@ -141,15 +142,17 @@ export default function FeedbackModal({
                             <X size={18} />
                         </button>
 
-                        <h2
-                            className="text-3xl font-black mb-2"
-                            style={{
-                                fontFamily: 'var(--font-archivo)',
-                            }}
-                        >
-                            Help improve PrepOS 🚀
-                        </h2>
-
+                        <div className="flex items-center gap-3 mb-2">
+                            <Rocket className="w-7 h-7 text-violet-900" />
+                            <h2
+                                className="text-3xl font-black"
+                                style={{
+                                    fontFamily: 'var(--font-archivo)',
+                                }}
+                            >
+                                Help improve PrepOS
+                            </h2>
+                        </div>
                         <p className="text-sm opacity-60 mb-6">
                             Since this is the beta version, your feedback
                             helps us improve the experience.

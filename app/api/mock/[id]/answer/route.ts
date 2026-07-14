@@ -96,6 +96,7 @@ export async function POST(
     try {
       const cleanJson = aiResponse.replace(/```json/gi, '').replace(/```/g, '').trim()
       parsed = JSON.parse(cleanJson)
+      console.log(parsed)
       parsed.score = Number(parsed.score)
 
       if (Number.isNaN(parsed.score)) {
